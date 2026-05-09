@@ -1,0 +1,2 @@
+# SemesterSync
+GDG hackathon Submittion
