@@ -1,11 +1,15 @@
 export type ThemeId =
   | "default"
   | "dark"
+  | "nebula"
+  | "emerald"
+  | "sunset"
+  | "rose"
+  | "arctic"
   | "pokemon"
   | "pacman"
   | "destiny"
-  | "marathon"
-  | "fortnite";
+  | "marathon";
 
 export type Theme = {
   id: ThemeId;
@@ -27,6 +31,36 @@ export const THEMES: readonly Theme[] = [
     label: "Dark",
     description: "Easy on the eyes",
     swatches: ["#0e0e14", "#f5f5fa", "#60a5fa"],
+  },
+  {
+    id: "nebula",
+    label: "Nebula",
+    description: "Purple & blue mesh",
+    swatches: ["#a855f7", "#3b82f6", "#60a5fa"],
+  },
+  {
+    id: "emerald",
+    label: "Emerald",
+    description: "Teal & green mesh",
+    swatches: ["#10b981", "#14b8a6", "#34d399"],
+  },
+  {
+    id: "sunset",
+    label: "Sunset",
+    description: "Orange & amber mesh",
+    swatches: ["#f97316", "#ef4444", "#fb923c"],
+  },
+  {
+    id: "rose",
+    label: "Rose",
+    description: "Pink & violet mesh",
+    swatches: ["#ec4899", "#a855f7", "#f472b6"],
+  },
+  {
+    id: "arctic",
+    label: "Arctic",
+    description: "Sky & indigo mesh",
+    swatches: ["#38bdf8", "#6366f1", "#38bdf8"],
   },
   {
     id: "pokemon",
@@ -51,12 +85,6 @@ export const THEMES: readonly Theme[] = [
     label: "Marathon",
     description: "Terminal red & cyan",
     swatches: ["#000000", "#e54b4b", "#00d4ff"],
-  },
-  {
-    id: "fortnite",
-    label: "Fortnite",
-    description: "Battle bus neon",
-    swatches: ["#1d0e3e", "#3afaff", "#fdf300"],
   },
 ] as const;
 

@@ -34,14 +34,18 @@ const config: Config = {
           800: "rgb(var(--ink-800-rgb) / <alpha-value>)",
           900: "rgb(var(--ink-900-rgb) / <alpha-value>)",
         },
-        surface: "rgb(var(--surface-rgb) / <alpha-value>)",
-        "surface-strong": "rgb(var(--surface-strong-rgb) / <alpha-value>)",
+        surface:
+          "rgb(var(--surface-rgb) / calc(<alpha-value> * var(--mesh-surface-alpha, 1)))",
+        "surface-strong":
+          "rgb(var(--surface-strong-rgb) / calc(<alpha-value> * var(--mesh-surface-strong-alpha, 1)))",
+        /** Solid panels (e.g. theme menu); ignores mesh frosted multipliers */
+        "surface-opaque": "rgb(var(--surface-rgb) / <alpha-value>)",
         primary: "rgb(var(--primary-rgb) / <alpha-value>)",
         "primary-fg": "rgb(var(--primary-fg-rgb) / <alpha-value>)",
         accent: "rgb(var(--accent-rgb) / <alpha-value>)",
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(16, 16, 26, 0.04), 0 4px 12px rgba(16, 16, 26, 0.06)",
+        soft: "var(--shadow-soft, 0 1px 2px rgba(16, 16, 26, 0.04), 0 4px 12px rgba(16, 16, 26, 0.06))",
       },
     },
   },

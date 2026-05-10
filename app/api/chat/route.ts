@@ -11,7 +11,7 @@ import {
   iterateGeminiSseTextDeltas,
 } from "@/lib/geminiStreamParse";
 import { supabaseServer } from "@/lib/supabaseServer";
-import type { DeadlineCategory } from "@/lib/types";
+import type { AssistantActionPayload } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,10 +20,20 @@ type Body = {
   message?: string;
 };
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
 const MAX_HISTORY = 12;
 const PAST_WINDOW_DAYS = 14;
 const FUTURE_WINDOW_DAYS = 120;
+const ACTION_BLOCK_TAG = "assistant_actions";
+const ACTION_BLOCK_INSTRUCTION = `
+If the user asks for a study schedule, append a final fenced JSON block using this exact format:
+\`\`\`${ACTION_BLOCK_TAG}
+{"studyPlan":[{"title":"...","estimateMinutes":45,"children":[...]}]}
+\`\`\`
+Rules:
+- Keep normal conversational answer first.
+- Include the fenced block only when useful.
+`;
 
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -95,7 +105,7 @@ export async function POST(request: Request) {
     history,
     message,
     today: now,
-  });
+  }) + ACTION_BLOCK_INSTRUCTION;
 
   const geminiBody = {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -209,7 +219,8 @@ async function streamChatResponse(args: {
           );
         }
 
-        const trimmed = assembled.trim();
+        const { cleanedText, actionPayload } = extractAssistantActionPayload(assembled);
+        const trimmed = cleanedText.trim();
         if (!trimmed) {
           controller.enqueue(
             encoder.encode(
@@ -240,6 +251,7 @@ async function streamChatResponse(args: {
             `data: ${JSON.stringify({
               done: true,
               message: assistantInsert.data,
+              actionPayload,
             })}\n\n`
           )
         );
@@ -261,4 +273,30 @@ async function streamChatResponse(args: {
       Connection: "keep-alive",
     },
   });
+}
+
+function extractAssistantActionPayload(text: string): {
+  cleanedText: string;
+  actionPayload: AssistantActionPayload | null;
+} {
+  const re = new RegExp("```" + ACTION_BLOCK_TAG + "\\s*([\\s\\S]*?)```", "i");
+  const match = text.match(re);
+  if (!match) return { cleanedText: text, actionPayload: null };
+  const rawJson = match[1]?.trim() ?? "";
+  try {
+    const parsed = JSON.parse(rawJson) as AssistantActionPayload;
+    return {
+      cleanedText: text.replace(match[0], "").trim(),
+      actionPayload: sanitizeActionPayload(parsed),
+    };
+  } catch {
+    return { cleanedText: text, actionPayload: null };
+  }
+}
+
+function sanitizeActionPayload(input: AssistantActionPayload): AssistantActionPayload {
+  const studyPlan = Array.isArray(input.studyPlan)
+    ? input.studyPlan.slice(0, 20)
+    : undefined;
+  return { studyPlan };
 }

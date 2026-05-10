@@ -53,7 +53,7 @@ export function ThemePicker() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-xl border border-ink-200 bg-surface shadow-soft"
+          className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-xl border border-ink-200 bg-surface-opaque shadow-soft backdrop-blur-none"
         >
           <div className="border-b border-ink-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-500">
             Theme
@@ -68,8 +68,10 @@ export function ThemePicker() {
                   aria-checked={active}
                   type="button"
                   onClick={() => {
-                    setTheme(t.id);
                     setOpen(false);
+                    if (t.id === theme) return;
+                    setTheme(t.id);
+                    window.location.reload();
                   }}
                   className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
                     active

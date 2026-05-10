@@ -70,6 +70,17 @@ export type GoogleCalendarEvent = {
 
 export type CalendarEventSource = "deadline" | "google" | "manual";
 
+export type StudyPlanNode = {
+  title: string;
+  estimateMinutes?: number;
+  reason?: string;
+  children?: StudyPlanNode[];
+};
+
+export type AssistantActionPayload = {
+  studyPlan?: StudyPlanNode[];
+};
+
 export const CATEGORY_LABELS: Record<DeadlineCategory, string> = {
   assignment: "Assignment",
   quiz: "Quiz",

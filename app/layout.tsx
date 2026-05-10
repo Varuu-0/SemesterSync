@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Press_Start_2P, VT323 } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ThemeMesh } from "@/components/ThemeMesh";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { THEME_STORAGE_KEY, THEMES } from "@/lib/themes";
 import { Toaster } from "sonner";
@@ -47,13 +48,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body>
-        <ThemeProvider>
-          <AuthProvider>
-            {children}
-            <Toaster richColors position="top-right" />
-          </AuthProvider>
-        </ThemeProvider>
+      <body className="relative min-h-full">
+        <ThemeMesh />
+        <div className="relative z-10 min-h-full">
+          <ThemeProvider>
+            <AuthProvider>
+              {children}
+              <Toaster richColors position="top-right" />
+            </AuthProvider>
+          </ThemeProvider>
+        </div>
       </body>
     </html>
   );

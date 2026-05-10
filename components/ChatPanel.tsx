@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MarkdownMessage } from "@/components/MarkdownMessage";
 import { supabaseBrowser } from "@/lib/supabase";
-import type { ChatMessage } from "@/lib/types";
+import type { AssistantActionPayload, ChatMessage } from "@/lib/types";
 import { useAuth } from "./AuthProvider";
 
 type Stats = {
@@ -18,12 +18,14 @@ async function readChatSseStream(
   onDelta: (delta: string) => void
 ): Promise<{
   message?: ChatMessage;
+  actionPayload?: AssistantActionPayload | null;
   error?: string;
 }> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
   let message: ChatMessage | undefined;
+  let actionPayload: AssistantActionPayload | null | undefined;
   let error: string | undefined;
 
   while (true) {
@@ -43,11 +45,15 @@ async function readChatSseStream(
           delta?: string;
           done?: boolean;
           message?: ChatMessage;
+          actionPayload?: AssistantActionPayload | null;
           error?: string;
         };
         if (payload.error) error = payload.error;
         if (payload.delta) onDelta(payload.delta);
-        if (payload.done && payload.message) message = payload.message;
+        if (payload.done && payload.message) {
+          message = payload.message;
+          actionPayload = payload.actionPayload ?? null;
+        }
       } catch {
         /* ignore malformed chunk */
       }
@@ -63,18 +69,22 @@ async function readChatSseStream(
           delta?: string;
           done?: boolean;
           message?: ChatMessage;
+          actionPayload?: AssistantActionPayload | null;
           error?: string;
         };
         if (payload.error) error = payload.error;
         if (payload.delta) onDelta(payload.delta);
-        if (payload.done && payload.message) message = payload.message;
+        if (payload.done && payload.message) {
+          message = payload.message;
+          actionPayload = payload.actionPayload ?? null;
+        }
       } catch {
         /* ignore */
       }
     }
   }
 
-  return { message, error };
+  return { message, actionPayload, error };
 }
 
 function groupChatMessages(messages: ChatMessage[]): {
@@ -132,6 +142,9 @@ export function ChatPanel({ stats }: { stats: Stats }) {
   const [streamReply, setStreamReply] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionPayloadByMessage, setActionPayloadByMessage] = useState<
+    Record<string, AssistantActionPayload>
+  >({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -288,6 +301,12 @@ export function ChatPanel({ stats }: { stats: Stats }) {
         setMessages((prev) =>
           prev.some((m) => m.id === row.id) ? prev : [...prev, row]
         );
+        if (streamResult.actionPayload) {
+          setActionPayloadByMessage((prev) => ({
+            ...prev,
+            [row.id]: streamResult.actionPayload as AssistantActionPayload,
+          }));
+        }
       }
     } catch (e) {
       console.error("chat reply error:", e);
@@ -376,6 +395,7 @@ export function ChatPanel({ stats }: { stats: Stats }) {
                 <Bubble
                   key={m.id}
                   message={m}
+                  actionPayload={actionPayloadByMessage[m.id]}
                   onDelete={() => deleteMessage(m.id)}
                 />
               ))}
@@ -481,9 +501,11 @@ function EmptyState({
 
 function Bubble({
   message,
+  actionPayload,
   onDelete,
 }: {
   message: ChatMessage;
+  actionPayload?: AssistantActionPayload;
   onDelete: () => void;
 }) {
   const isAssistant = message.role === "assistant";
