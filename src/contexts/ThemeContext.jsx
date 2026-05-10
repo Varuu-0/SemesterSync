@@ -194,11 +194,47 @@ export function ThemeProvider({ children }) {
     if (!theme) return;
 
     const root = document.documentElement;
+    
+    // Inject legacy variables for existing specific classes
     Object.entries(theme.colors).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
 
-    // Update glow colors
+    // Dynamically map legacy theme hex variables to the new ShadCN variables
+    const shadcnMap = {
+      '--background': theme.colors['--bg-primary'],
+      '--foreground': theme.colors['--text-primary'],
+      '--card': theme.colors['--bg-secondary'],
+      '--card-foreground': theme.colors['--text-primary'],
+      '--popover': theme.colors['--bg-secondary'],
+      '--popover-foreground': theme.colors['--text-primary'],
+      '--primary': theme.colors['--bg-glow-1'] || theme.colors['--text-accent'],
+      '--primary-foreground': id === 'light' ? '#ffffff' : '#000000',
+      '--secondary': theme.colors['--bg-elevated'],
+      '--secondary-foreground': theme.colors['--text-primary'],
+      '--muted': theme.colors['--bg-elevated'],
+      '--muted-foreground': theme.colors['--text-secondary'],
+      '--accent': theme.colors['--bg-surface'] || theme.colors['--bg-elevated'],
+      '--accent-foreground': theme.colors['--text-accent'],
+      '--destructive': '#ef4444',
+      '--destructive-foreground': '#ffffff',
+      '--border': theme.colors['--border-default'] || theme.colors['--bg-elevated'],
+      '--input': theme.colors['--bg-elevated'],
+      '--ring': theme.colors['--bg-glow-1'] || theme.colors['--text-accent'],
+    };
+
+    Object.entries(shadcnMap).forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
+
+    // Toggle dark mode class if needed by third-party tools
+    if (id === 'light') {
+      root.classList.remove('dark');
+    } else {
+      root.classList.add('dark');
+    }
+
+    // Update glow colors explicitly
     const glow1 = document.querySelector('.bg-glow--purple');
     const glow2 = document.querySelector('.bg-glow--blue');
     if (glow1) glow1.style.background = theme.colors['--bg-glow-1'];

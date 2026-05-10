@@ -16,9 +16,13 @@ export function CourseProvider({ children }) {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [completedTasks, setCompletedTasks] = useState({});
+  const [customEvents, setCustomEvents] = useState([]);
+  const [deletedEvents, setDeletedEvents] = useState({});
   
   const storageKey = user ? `semestersync_courses_${user.id}` : 'semestersync_courses';
   const completedStorageKey = user ? `semestersync_completed_${user.id}` : 'semestersync_completed';
+  const customEventsStorageKey = user ? `semestersync_custom_events_${user.id}` : 'semestersync_custom_events';
+  const deletedEventsStorageKey = user ? `semestersync_deleted_events_${user.id}` : 'semestersync_deleted_events';
 
   // Restore from localStorage when user changes
   useEffect(() => {
@@ -36,11 +40,27 @@ export function CourseProvider({ children }) {
       } else {
         setCompletedTasks({});
       }
+
+      const storedCustomEvents = localStorage.getItem(customEventsStorageKey);
+      if (storedCustomEvents) {
+        setCustomEvents(JSON.parse(storedCustomEvents));
+      } else {
+        setCustomEvents([]);
+      }
+
+      const storedDeletedEvents = localStorage.getItem(deletedEventsStorageKey);
+      if (storedDeletedEvents) {
+        setDeletedEvents(JSON.parse(storedDeletedEvents));
+      } else {
+        setDeletedEvents({});
+      }
     } catch {
       setCourses([]);
       setCompletedTasks({});
+      setCustomEvents([]);
+      setDeletedEvents({});
     }
-  }, [storageKey, completedStorageKey]);
+  }, [storageKey, completedStorageKey, customEventsStorageKey, deletedEventsStorageKey]);
 
   // Persist to localStorage
   useEffect(() => {
@@ -54,6 +74,18 @@ export function CourseProvider({ children }) {
       localStorage.setItem(completedStorageKey, JSON.stringify(completedTasks));
     }
   }, [completedTasks, completedStorageKey]);
+
+  useEffect(() => {
+    if (customEvents.length > 0 || localStorage.getItem(customEventsStorageKey)) {
+      localStorage.setItem(customEventsStorageKey, JSON.stringify(customEvents));
+    }
+  }, [customEvents, customEventsStorageKey]);
+
+  useEffect(() => {
+    if (Object.keys(deletedEvents).length > 0 || localStorage.getItem(deletedEventsStorageKey)) {
+      localStorage.setItem(deletedEventsStorageKey, JSON.stringify(deletedEvents));
+    }
+  }, [deletedEvents, deletedEventsStorageKey]);
 
   const addCourse = useCallback((data) => {
     const id = `course-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -76,6 +108,28 @@ export function CourseProvider({ children }) {
   const clearCourses = useCallback(() => {
     setCourses([]);
     setCompletedTasks({});
+    setCustomEvents([]);
+    setDeletedEvents({});
+  }, []);
+
+  const addCustomEvent = useCallback((eventData) => {
+    const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const event = {
+      id,
+      isCustom: true,
+      ...eventData,
+      addedAt: new Date().toISOString(),
+    };
+    setCustomEvents((prev) => [...prev, event]);
+    return event;
+  }, []);
+
+  const deleteEvent = useCallback((eventId, isCustom) => {
+    if (isCustom) {
+      setCustomEvents((prev) => prev.filter(e => e.id !== eventId));
+    } else {
+      setDeletedEvents((prev) => ({ ...prev, [eventId]: true }));
+    }
   }, []);
 
   const toggleTaskCompletion = useCallback((taskId) => {
@@ -97,6 +151,8 @@ export function CourseProvider({ children }) {
       // Assignments
       (course.assignments || []).forEach((a) => {
         const eventId = `${course.id}-${a.name}`;
+        if (deletedEvents[eventId]) return;
+        
         events.push({
           id: eventId,
           courseId: course.id,
@@ -128,6 +184,8 @@ export function CourseProvider({ children }) {
 
         if (!isDuplicate) {
           const eventId = `${course.id}-${d.event}`;
+          if (deletedEvents[eventId]) return;
+
           events.push({
             id: eventId,
             courseId: course.id,
@@ -146,13 +204,39 @@ export function CourseProvider({ children }) {
         }
       });
     });
+
+    // Add Custom Events
+    customEvents.forEach((ce) => {
+      if (deletedEvents[ce.id]) return;
+
+      let linkedCourse = null;
+      if (ce.courseId) linkedCourse = courses.find((c) => c.id === ce.courseId);
+      
+      events.push({
+        id: ce.id,
+        isCustom: true,
+        courseId: ce.courseId || 'personal',
+        courseName: linkedCourse ? linkedCourse.courseName : 'Personal',
+        courseCode: linkedCourse ? linkedCourse.courseCode : '',
+        color: linkedCourse ? linkedCourse.color : 'hsl(var(--primary))',
+        colorRaw: linkedCourse ? linkedCourse.colorRaw : '#8b5cf6',
+        title: ce.title,
+        type: ce.type || 'other',
+        date: ce.date,
+        dateRaw: ce.date,
+        weight: null,
+        description: '',
+        completed: !!completedTasks[ce.id],
+      });
+    });
+
     return events.sort((a, b) => {
       if (!a.date && !b.date) return 0;
       if (!a.date) return 1;
       if (!b.date) return -1;
       return a.date.localeCompare(b.date);
     });
-  }, [courses, completedTasks]);
+  }, [courses, completedTasks, customEvents, deletedEvents]);
 
   // Get events for a specific date (YYYY-MM-DD)
   const getEventsForDate = useCallback((dateStr) => {
@@ -180,6 +264,8 @@ export function CourseProvider({ children }) {
     removeCourse,
     clearCourses,
     toggleTaskCompletion,
+    addCustomEvent,
+    deleteEvent,
     getAllEvents,
     getEventsForDate,
     getWeekEvents,
