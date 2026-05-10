@@ -43,6 +43,12 @@ create index if not exists deadlines_user_course_idx on public.deadlines(user_id
 create index if not exists deadlines_due_at_idx on public.deadlines(due_at);
 create index if not exists deadlines_user_completed_idx on public.deadlines(user_id, completed_at);
 
+create table if not exists public.syllabus_cache (
+  content_hash text primary key,
+  parsed_json jsonb not null,
+  created_at timestamptz not null default now()
+);
+
 -- Per-user settings, including Google Calendar integration state.
 create table if not exists public.user_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,

@@ -3,6 +3,7 @@
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useMemo, useState } from "react";
 import {
@@ -74,12 +75,12 @@ export function CalendarView({
     <>
       <div className="rounded-2xl border border-ink-200 bg-surface p-4 shadow-soft">
         <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           headerToolbar={{
             left: "prev,next today",
             center: "title",
-            right: "dayGridMonth,timeGridWeek",
+            right: "dayGridMonth,timeGridWeek,listWeek",
           }}
           height="auto"
           events={events}

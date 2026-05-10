@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import {
   compactSyllabusWhitespace,
@@ -92,6 +94,23 @@ export async function POST(request: Request) {
     body.referenceDate || new Date().toISOString().slice(0, 10);
   const courseName = body.courseName?.trim() || "this course";
   const fileName = body.fileName?.trim() || "";
+  const cacheKey = hashSyllabus(trimmed);
+  const cache = createSyllabusCacheClient();
+
+  if (cache) {
+    try {
+      const { data } = await cache
+        .from("syllabus_cache")
+        .select("parsed_json")
+        .eq("content_hash", cacheKey)
+        .single();
+      if (data?.parsed_json) {
+        return NextResponse.json(data.parsed_json);
+      }
+    } catch {
+      // Cache is best-effort. If table doesn't exist, we continue to Gemini.
+    }
+  }
 
   const prompt = buildPrompt({
     text: trimmed,
@@ -180,7 +199,7 @@ export async function POST(request: Request) {
 
   let parsed: ModelResponse;
   try {
-    parsed = JSON.parse(geminiRaw);
+    parsed = JSON.parse(extractJsonObject(geminiRaw));
   } catch {
     return NextResponse.json(
       { error: "Gemini returned invalid JSON." },
@@ -196,14 +215,23 @@ export async function POST(request: Request) {
     .map((d) => normalize(d, termStart, termEnd))
     .filter((d): d is NormalizedDeadline => d !== null);
 
-  return NextResponse.json({
+  const payload = {
     deadlines: cleaned,
     term: {
       label: termLabel,
       termStart: termStart ? termStart.toISOString().slice(0, 10) : null,
       termEnd: termEnd ? termEnd.toISOString().slice(0, 10) : null,
     },
-  });
+  };
+
+  if (cache) {
+    void cache.from("syllabus_cache").upsert(
+      { content_hash: cacheKey, parsed_json: payload },
+      { onConflict: "content_hash" }
+    );
+  }
+
+  return NextResponse.json(payload);
 }
 
 type NormalizedDeadline = {
@@ -310,4 +338,28 @@ function addDays(d: Date, n: number): Date {
   const r = new Date(d);
   r.setDate(r.getDate() + n);
   return r;
+}
+
+function hashSyllabus(text: string): string {
+  const normalized = text.toLowerCase().replace(/\s+/g, " ").trim();
+  return createHash("sha256").update(normalized).digest("hex");
+}
+
+function createSyllabusCacheClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRole) return null;
+  return createClient(url, serviceRole, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+function extractJsonObject(raw: string): string {
+  const noFence = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  const start = noFence.indexOf("{");
+  const end = noFence.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    return noFence.slice(start, end + 1);
+  }
+  return noFence;
 }
