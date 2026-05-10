@@ -75,6 +75,7 @@ export async function POST(request: Request) {
   const coursesRes = await supabase
     .from("courses")
     .select("id, name, color, syllabus_text")
+    .eq("user_id", user.id)
     .order("name", { ascending: true })
     .returns<CourseRow[]>();
   const courses = coursesRes.data ?? [];
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
     .select(
       "id, course_id, title, category, due_at, courses!inner(name, color)"
     )
+    .eq("user_id", user.id)
     .gte("due_at", lower.toISOString())
     .lte("due_at", upper.toISOString())
     .order("due_at", { ascending: true })
@@ -93,6 +95,7 @@ export async function POST(request: Request) {
   const historyRes = await supabase
     .from("chat_messages")
     .select("role, text, created_at")
+    .eq("user_id", user.id)
     .is("course_id", null)
     .order("created_at", { ascending: false })
     .limit(MAX_HISTORY)

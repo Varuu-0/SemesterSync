@@ -137,11 +137,36 @@ drop policy if exists "deadlines owner update" on public.deadlines;
 drop policy if exists "deadlines owner delete" on public.deadlines;
 
 create policy "deadlines owner select" on public.deadlines
-  for select using (auth.uid() = user_id);
+  for select using (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.courses c
+      where c.id = course_id and c.user_id = auth.uid()
+    )
+  );
 create policy "deadlines owner insert" on public.deadlines
-  for insert with check (auth.uid() = user_id);
+  for insert with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.courses c
+      where c.id = course_id and c.user_id = auth.uid()
+    )
+  );
 create policy "deadlines owner update" on public.deadlines
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update using (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.courses c
+      where c.id = course_id and c.user_id = auth.uid()
+    )
+  )
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.courses c
+      where c.id = course_id and c.user_id = auth.uid()
+    )
+  );
 create policy "deadlines owner delete" on public.deadlines
   for delete using (auth.uid() = user_id);
 
@@ -152,7 +177,16 @@ drop policy if exists "chat owner delete" on public.chat_messages;
 create policy "chat owner select" on public.chat_messages
   for select using (auth.uid() = user_id);
 create policy "chat owner insert" on public.chat_messages
-  for insert with check (auth.uid() = user_id);
+  for insert with check (
+    auth.uid() = user_id
+    and (
+      course_id is null
+      or exists (
+        select 1 from public.courses c
+        where c.id = course_id and c.user_id = auth.uid()
+      )
+    )
+  );
 create policy "chat owner delete" on public.chat_messages
   for delete using (auth.uid() = user_id);
 
