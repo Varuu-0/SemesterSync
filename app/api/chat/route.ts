@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
+import {
+  buildChatPrompt,
+  type CourseRow,
+  type DeadlineRow,
+  type HistoryRow,
+} from "@/lib/chatPrompt";
+import { geminiThinkingGenerationSlice } from "@/lib/geminiGeneration";
+import {
+  iterateGeminiLineJsonDeltas,
+  iterateGeminiSseTextDeltas,
+} from "@/lib/geminiStreamParse";
 import { supabaseServer } from "@/lib/supabaseServer";
-import { CATEGORY_LABELS, type DeadlineCategory } from "@/lib/types";
+import type { DeadlineCategory } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,32 +21,9 @@ type Body = {
 };
 
 const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
-const MAX_SYLLABUS_CHARS_PER_COURSE = 18_000;
 const MAX_HISTORY = 12;
 const PAST_WINDOW_DAYS = 14;
 const FUTURE_WINDOW_DAYS = 120;
-
-type CourseRow = {
-  id: string;
-  name: string;
-  color: string;
-  syllabus_text: string | null;
-};
-
-type DeadlineRow = {
-  id: string;
-  course_id: string;
-  title: string;
-  category: DeadlineCategory | null;
-  due_at: string;
-  courses: { name: string; color: string } | null;
-};
-
-type HistoryRow = {
-  role: "user" | "assistant";
-  text: string;
-  created_at: string;
-};
 
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -66,18 +54,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Empty message." }, { status: 400 });
   }
 
-  const coursesRes = await supabase
-    .from("courses")
-    .select("id, name, color, syllabus_text")
-    .order("name", { ascending: true })
-    .returns<CourseRow[]>();
-  const courses = coursesRes.data ?? [];
+  const wantsStream = request.headers.get("accept")?.includes("text/event-stream");
 
   const now = new Date();
   const lower = new Date(now);
   lower.setDate(lower.getDate() - PAST_WINDOW_DAYS);
   const upper = new Date(now);
   upper.setDate(upper.getDate() + FUTURE_WINDOW_DAYS);
+
+  const coursesRes = await supabase
+    .from("courses")
+    .select("id, name, color, syllabus_text")
+    .order("name", { ascending: true })
+    .returns<CourseRow[]>();
+  const courses = coursesRes.data ?? [];
 
   const deadlinesRes = await supabase
     .from("deadlines")
@@ -99,7 +89,7 @@ export async function POST(request: Request) {
     .returns<HistoryRow[]>();
   const history = (historyRes.data ?? []).slice().reverse();
 
-  const prompt = buildPrompt({
+  const prompt = buildChatPrompt({
     courses,
     deadlines,
     history,
@@ -107,21 +97,31 @@ export async function POST(request: Request) {
     today: now,
   });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
-  const requestBody = {
+  const geminiBody = {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.4,
       maxOutputTokens: 900,
+      ...geminiThinkingGenerationSlice(),
     },
   };
 
+  if (wantsStream) {
+    return streamChatResponse({
+      supabase,
+      userId: user.id,
+      apiKey,
+      geminiBody,
+    });
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
   let res: Response;
   try {
     res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(geminiBody),
     });
   } catch (e) {
     return NextResponse.json(
@@ -157,90 +157,108 @@ export async function POST(request: Request) {
   return NextResponse.json({ reply });
 }
 
-function buildPrompt(args: {
-  courses: CourseRow[];
-  deadlines: DeadlineRow[];
-  history: HistoryRow[];
-  message: string;
-  today: Date;
+async function streamChatResponse(args: {
+  supabase: ReturnType<typeof supabaseServer>;
+  userId: string;
+  apiKey: string;
+  geminiBody: Record<string, unknown>;
 }) {
-  const { courses, deadlines, history, message, today } = args;
+  const { supabase, userId, apiKey, geminiBody } = args;
 
-  const todayStr = today.toLocaleDateString(undefined, {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?key=${encodeURIComponent(apiKey)}&alt=sse`;
 
-  const courseListBlock = courses.length
-    ? courses.map((c) => `- ${c.name}`).join("\n")
-    : "(none yet — the student has not added any courses)";
-
-  const syllabusBlocks = courses
-    .filter((c) => c.syllabus_text && c.syllabus_text.trim())
-    .map((c) => {
-      const trimmed = (c.syllabus_text ?? "").slice(
-        0,
-        MAX_SYLLABUS_CHARS_PER_COURSE
-      );
-      return `[${c.name}]\n"""\n${trimmed}\n"""`;
+  let geminiRes: Response;
+  try {
+    geminiRes = await fetch(streamUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(geminiBody),
     });
+  } catch (e) {
+    return NextResponse.json(
+      { error: `Failed to reach Gemini: ${(e as Error).message}` },
+      { status: 502 }
+    );
+  }
 
-  const syllabiBlock = syllabusBlocks.length
-    ? `Syllabi (truncated where long):\n${syllabusBlocks.join("\n\n")}`
-    : "No syllabi have been uploaded yet. If the student asks about course content, suggest uploading a PDF on the Courses page.";
+  if (!geminiRes.ok || !geminiRes.body) {
+    const errText = await geminiRes.text().catch(() => "");
+    return NextResponse.json(
+      { error: `Gemini error ${geminiRes.status}: ${errText.slice(0, 500)}` },
+      { status: 502 }
+    );
+  }
 
-  const deadlineLines = deadlines.length
-    ? deadlines.map((d) => formatDeadline(d)).join("\n")
-    : "(no deadlines recorded in the past 14 days or next 120 days)";
+  const encoder = new TextEncoder();
 
-  const historyText = history.length
-    ? history
-        .map(
-          (h) =>
-            `${h.role === "assistant" ? "Assistant" : "Student"}: ${h.text}`
-        )
-        .join("\n")
-    : "(no prior conversation)";
+  const ct = geminiRes.headers.get("content-type") ?? "";
+  const useSse =
+    ct.includes("text/event-stream") || ct.includes("event-stream");
 
-  return `You are SemesterSync's AI study assistant. You help one student plan across all of their courses.
+  const readable = new ReadableStream({
+    async start(controller) {
+      let assembled = "";
+      try {
+        const deltas = useSse
+          ? iterateGeminiSseTextDeltas(geminiRes.body!)
+          : iterateGeminiLineJsonDeltas(geminiRes.body!);
+        for await (const delta of deltas) {
+          assembled += delta;
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`)
+          );
+        }
 
-Today is ${todayStr}.
+        const trimmed = assembled.trim();
+        if (!trimmed) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ error: "Gemini returned an empty reply." })}\n\n`
+            )
+          );
+          controller.close();
+          return;
+        }
 
-The student's courses (${courses.length}):
-${courseListBlock}
+        const assistantInsert = await supabase
+          .from("chat_messages")
+          .insert({
+            user_id: userId,
+            course_id: null,
+            role: "assistant",
+            user_name: "SemesterSync AI",
+            user_photo: null,
+            text: trimmed,
+          })
+          .select()
+          .single();
 
-${syllabiBlock}
+        if (assistantInsert.error) throw assistantInsert.error;
 
-All deadlines (chronological, past 2 weeks through next 4 months):
-${deadlineLines}
-
-Recent conversation:
-${historyText}
-
-Student: ${message}
-
-Reply rules:
-- Be concise: aim for 2-6 sentences unless the student explicitly asks for detail.
-- When listing multiple deadlines, use a short bullet list with course name, title, and date ("CP372 — Project 1, Fri Jan 23").
-- Always disambiguate by course when more than one course is involved.
-- Ground every factual claim in the syllabi or deadlines listed above. If the answer isn't there, say so plainly and suggest the next step (e.g. "upload that course's syllabus on the Courses page").
-- Never invent dates, weights, policies, or page numbers.
-- Use plain prose. No markdown headings.
-
-Respond now.`;
-}
-
-function formatDeadline(d: DeadlineRow): string {
-  const date = new Date(d.due_at);
-  const dateStr = date.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              done: true,
+              message: assistantInsert.data,
+            })}\n\n`
+          )
+        );
+        controller.close();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`)
+        );
+        controller.close();
+      }
+    },
   });
-  const cat = d.category ? ` [${CATEGORY_LABELS[d.category] ?? d.category}]` : "";
-  const courseName = d.courses?.name ?? "Unknown course";
-  return `- ${courseName} — ${d.title}${cat} — ${dateStr}`;
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }

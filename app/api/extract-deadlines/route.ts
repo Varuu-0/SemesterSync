@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  compactSyllabusWhitespace,
+  geminiThinkingGenerationSlice,
+} from "@/lib/geminiGeneration";
 import { DEADLINE_CATEGORIES } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -25,7 +29,15 @@ type ModelResponse = {
   }>;
 };
 
-const MAX_INPUT_CHARS = 80_000;
+/** Fewer input tokens → faster API calls; syllabi rarely need more than ~48k chars. */
+function maxSyllabusInputChars(): number {
+  const raw = process.env.GEMINI_MAX_SYLLABUS_CHARS?.trim();
+  const parsed = raw ? parseInt(raw, 10) : NaN;
+  const fallback = 48_000;
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, 120_000);
+}
+
 const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 // Allow a deadline to fall up to this many days outside the inferred term
 // before we drop it as a hallucination.
@@ -52,7 +64,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Empty syllabus text." }, { status: 400 });
   }
 
-  const trimmed = text.slice(0, MAX_INPUT_CHARS);
+  const compacted = compactSyllabusWhitespace(text);
+  const trimmed = compacted.slice(0, maxSyllabusInputChars());
   const referenceDate =
     body.referenceDate || new Date().toISOString().slice(0, 10);
   const courseName = body.courseName?.trim() || "this course";
@@ -71,6 +84,8 @@ export async function POST(request: Request) {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.05,
+      maxOutputTokens: 8192,
+      ...geminiThinkingGenerationSlice(),
       responseMimeType: "application/json",
       responseSchema: {
         type: "OBJECT",

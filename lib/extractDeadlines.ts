@@ -52,26 +52,31 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 
   const buffer = await file.arrayBuffer();
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
+  const pageNumbers = Array.from({ length: doc.numPages }, (_, i) => i + 1);
+  const pages = await Promise.all(pageNumbers.map((n) => doc.getPage(n)));
+  const pageTexts = await Promise.all(pages.map((page) => extractTextFromPdfPage(page)));
+  return pageTexts.join("\n\n");
+}
+
+async function extractTextFromPdfPage(page: {
+  getTextContent: () => Promise<{ items: unknown[] }>;
+}): Promise<string> {
+  const content = await page.getTextContent();
   const lines: string[] = [];
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    let lineY: number | null = null;
-    let line = "";
-    for (const item of content.items as Array<{ str: string; transform: number[] }>) {
-      const y = item.transform?.[5];
-      if (lineY === null || (y !== undefined && Math.abs(y - lineY) < 2)) {
-        line += (line && !line.endsWith(" ") ? " " : "") + item.str;
-        lineY = y ?? lineY;
-      } else {
-        if (line.trim()) lines.push(line.trim());
-        line = item.str;
-        lineY = y ?? null;
-      }
+  let lineY: number | null = null;
+  let line = "";
+  for (const item of content.items as Array<{ str: string; transform: number[] }>) {
+    const y = item.transform?.[5];
+    if (lineY === null || (y !== undefined && Math.abs(y - lineY) < 2)) {
+      line += (line && !line.endsWith(" ") ? " " : "") + item.str;
+      lineY = y ?? lineY;
+    } else {
+      if (line.trim()) lines.push(line.trim());
+      line = item.str;
+      lineY = y ?? null;
     }
-    if (line.trim()) lines.push(line.trim());
-    lines.push("");
   }
+  if (line.trim()) lines.push(line.trim());
   return lines.join("\n");
 }
 

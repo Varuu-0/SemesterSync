@@ -11,12 +11,78 @@ type Stats = {
   deadlineCount: number;
 };
 
+/** Parse SSE frames from POST /api/chat (text/event-stream). */
+async function readChatSseStream(
+  body: ReadableStream<Uint8Array>,
+  onDelta: (delta: string) => void
+): Promise<{
+  message?: ChatMessage;
+  error?: string;
+}> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let message: ChatMessage | undefined;
+  let error: string | undefined;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    while (true) {
+      const m = buf.match(/\r?\n\r?\n/);
+      if (!m || m.index === undefined) break;
+      const block = buf.slice(0, m.index);
+      buf = buf.slice(m.index + m[0].length);
+      const line = block.split(/\r?\n/).find((l) => l.startsWith("data: "));
+      if (!line) continue;
+      try {
+        const payload = JSON.parse(line.slice(6).trim()) as {
+          delta?: string;
+          done?: boolean;
+          message?: ChatMessage;
+          error?: string;
+        };
+        if (payload.error) error = payload.error;
+        if (payload.delta) onDelta(payload.delta);
+        if (payload.done && payload.message) message = payload.message;
+      } catch {
+        /* ignore malformed chunk */
+      }
+    }
+  }
+
+  const tail = buf.trim();
+  if (tail) {
+    const line = tail.split(/\r?\n/).find((l) => l.startsWith("data: "));
+    if (line) {
+      try {
+        const payload = JSON.parse(line.slice(6).trim()) as {
+          delta?: string;
+          done?: boolean;
+          message?: ChatMessage;
+          error?: string;
+        };
+        if (payload.error) error = payload.error;
+        if (payload.delta) onDelta(payload.delta);
+        if (payload.done && payload.message) message = payload.message;
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  return { message, error };
+}
+
 export function ChatPanel({ stats }: { stats: Stats }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [thinking, setThinking] = useState(false);
+  /** Live assistant text while SSE stream is open (including empty string = started). */
+  const [streamReply, setStreamReply] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -95,7 +161,7 @@ export function ChatPanel({ stats }: { stats: Stats }) {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages.length, thinking]);
+  }, [messages.length, streamReply]);
 
   async function send() {
     if (!user) return;
@@ -141,11 +207,14 @@ export function ChatPanel({ stats }: { stats: Stats }) {
       return;
     }
 
-    setThinking(true);
+    setStreamReply("");
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          accept: "text/event-stream",
+        },
         body: JSON.stringify({ message: value }),
       });
 
@@ -158,26 +227,21 @@ export function ChatPanel({ stats }: { stats: Stats }) {
         throw new Error(reason);
       }
 
-      const data = (await res.json()) as { reply: string };
+      if (!res.body) throw new Error("No response body.");
 
-      const assistantInsert = await supabase
-        .from("chat_messages")
-        .insert({
-          user_id: user.id,
-          course_id: null,
-          role: "assistant",
-          user_name: "SemesterSync AI",
-          user_photo: null,
-          text: data.reply,
-        })
-        .select()
-        .single();
-      if (assistantInsert.error) throw assistantInsert.error;
+      const streamResult = await readChatSseStream(res.body, (delta) => {
+        setStreamReply((prev) => (prev === null ? delta : prev + delta));
+      });
 
-      const row = assistantInsert.data as ChatMessage;
-      setMessages((prev) =>
-        prev.some((m) => m.id === row.id) ? prev : [...prev, row]
-      );
+      if (streamResult.error) {
+        throw new Error(streamResult.error);
+      }
+      if (streamResult.message) {
+        const row = streamResult.message as ChatMessage;
+        setMessages((prev) =>
+          prev.some((m) => m.id === row.id) ? prev : [...prev, row]
+        );
+      }
     } catch (e) {
       console.error("chat reply error:", e);
       setError((e as Error).message || "Failed to get a reply.");
@@ -188,7 +252,7 @@ export function ChatPanel({ stats }: { stats: Stats }) {
       }
       setText(value);
     } finally {
-      setThinking(false);
+      setStreamReply(null);
       setBusy(false);
       inputRef.current?.focus();
     }
@@ -244,9 +308,7 @@ export function ChatPanel({ stats }: { stats: Stats }) {
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {loading ? (
-          <div className="grid h-full place-items-center text-center text-sm text-ink-500">
-            Loading…
-          </div>
+          <ChatThreadSkeleton />
         ) : messages.length === 0 ? (
           <EmptyState stats={stats} onPick={(s) => setText(s)} />
         ) : (
@@ -258,7 +320,9 @@ export function ChatPanel({ stats }: { stats: Stats }) {
             />
           ))
         )}
-        {thinking && <ThinkingBubble />}
+        {streamReply !== null && (
+          <StreamingAssistantBubble text={streamReply} />
+        )}
       </div>
 
       {error && (
@@ -288,7 +352,7 @@ export function ChatPanel({ stats }: { stats: Stats }) {
           disabled={busy || !text.trim()}
           className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-fg hover:opacity-90 disabled:opacity-60"
         >
-          {busy ? "Sending…" : "Send"}
+          {busy ? (streamReply !== null ? "Replying…" : "Sending…") : "Send"}
         </button>
       </form>
     </div>
@@ -405,19 +469,41 @@ function Bubble({
   );
 }
 
-function ThinkingBubble() {
+function StreamingAssistantBubble({ text }: { text: string }) {
+  const showDots = text.length === 0;
   return (
     <div className="flex justify-start">
-      <div className="rounded-2xl border border-ink-200 bg-surface px-3 py-2 text-sm shadow-soft">
+      <div className="max-w-[85%] rounded-2xl border border-ink-200 bg-surface px-3 py-2 text-sm shadow-soft">
         <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500">
           <AiMark />
           SemesterSync AI
         </div>
-        <div className="flex items-center gap-1 py-0.5">
-          <Dot delay="0ms" />
-          <Dot delay="120ms" />
-          <Dot delay="240ms" />
-        </div>
+        {showDots ? (
+          <div className="flex items-center gap-2 py-0.5">
+            <span className="text-xs text-ink-400">Generating…</span>
+            <Dot delay="0ms" />
+            <Dot delay="120ms" />
+            <Dot delay="240ms" />
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap break-words text-ink-900">{text}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChatThreadSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 px-1 py-2">
+      <div className="flex justify-end">
+        <div className="h-16 w-[72%] animate-pulse rounded-2xl bg-ink-200/70" />
+      </div>
+      <div className="flex justify-start">
+        <div className="h-24 w-[78%] animate-pulse rounded-2xl bg-ink-100" />
+      </div>
+      <div className="flex justify-end">
+        <div className="h-12 w-[52%] animate-pulse rounded-2xl bg-ink-200/60" />
       </div>
     </div>
   );
