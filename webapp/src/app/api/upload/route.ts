@@ -228,8 +228,14 @@ export async function POST(req: NextRequest) {
         { bg: 'bg-cyan-500', text: 'text-cyan-500' }
       ]
       
-      parsed.courses.forEach((c: any, i: number) => {
-        const colorPair = COLORS[i % COLORS.length]
+      parsed.courses.forEach((c: any) => {
+        // Create a simple hash from the course name/id to deterministically pick a color
+        const str = c.name || c.id || Math.random().toString()
+        let hash = 0
+        for (let j = 0; j < str.length; j++) {
+          hash = str.charCodeAt(j) + ((hash << 5) - hash)
+        }
+        const colorPair = COLORS[Math.abs(hash) % COLORS.length]
         c.color = colorPair.bg
         c.textColor = colorPair.text
       })
