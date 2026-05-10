@@ -27,6 +27,11 @@ export function buildIcs(
     const descParts: string[] = [];
     if (d.category) descParts.push(`Category: ${d.category}`);
     if (d.source_snippet) descParts.push(d.source_snippet);
+    const colorLine =
+      course?.color && /^#[0-9a-fA-F]{6}$/.test(course.color.trim())
+        ? `COLOR:${course.color.trim()}`
+        : "";
+
     lines.push(
       "BEGIN:VEVENT",
       `UID:${d.id}@semestersync`,
@@ -34,6 +39,7 @@ export function buildIcs(
       `DTSTART;VALUE=DATE:${formatDateOnly(date)}`,
       `DTEND;VALUE=DATE:${formatDateOnly(addDays(date, 1))}`,
       `SUMMARY:${escapeText(summary)}`,
+      colorLine,
       d.category ? `CATEGORIES:${escapeText(d.category)}` : "",
       completed ? "STATUS:COMPLETED" : "STATUS:CONFIRMED",
       completed && d.completed_at

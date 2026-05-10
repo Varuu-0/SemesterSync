@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Press_Start_2P, VT323, Pixelify_Sans } from "next/font/google";
+import { Press_Start_2P, VT323 } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { THEME_STORAGE_KEY } from "@/lib/themes";
+import { THEME_STORAGE_KEY, THEMES } from "@/lib/themes";
 
 const pressStart = Press_Start_2P({
   subsets: ["latin"],
@@ -19,12 +19,6 @@ const vt323 = VT323({
   variable: "--font-vt323",
 });
 
-const pixelify = Pixelify_Sans({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-pixelify",
-});
-
 export const metadata: Metadata = {
   title: "SemesterSync",
   description:
@@ -36,8 +30,9 @@ export const metadata: Metadata = {
 const themeInitScript = `
 (function() {
   try {
+    var valid = ${JSON.stringify(THEMES.map((theme) => theme.id))};
     var t = localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
-    if (t) document.documentElement.setAttribute('data-theme', t);
+    if (t && valid.indexOf(t) !== -1) document.documentElement.setAttribute('data-theme', t);
   } catch (e) {}
 })();
 `;
@@ -46,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${pressStart.variable} ${vt323.variable} ${pixelify.variable}`}
+      className={`${pressStart.variable} ${vt323.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />

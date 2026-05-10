@@ -142,11 +142,63 @@ export type DeadlinePayload = {
   id: string;
   title: string;
   courseName?: string;
+  /** Course accent hex (e.g. #3b82f6); mapped to Google's preset event colorId on sync. */
+  courseColor?: string | null;
   due_at: string; // ISO timestamp
   category: string | null;
   source_snippet: string | null;
   completed_at: string | null;
 };
+
+/**
+ * Google Calendar only allows 11 preset event colors on the API (`colorId` "1"…"11").
+ * RGB values match the standard Calendar palette for nearest-neighbor matching.
+ * @see https://developers.google.com/calendar/api/v3/reference/events
+ */
+const GCAL_PRESET_EVENT_COLORS: Record<
+  string,
+  readonly [number, number, number]
+> = {
+  "1": [164, 189, 252], // lavender
+  "2": [122, 231, 191], // sage
+  "3": [219, 173, 255], // grape
+  "4": [255, 136, 124], // flamingo
+  "5": [251, 215, 91], // banana
+  "6": [255, 184, 120], // tangerine
+  "7": [70, 214, 219], // peacock
+  "8": [225, 225, 225], // graphite
+  "9": [84, 132, 237], // blueberry
+  "10": [81, 183, 73], // basil
+  "11": [220, 33, 39], // tomato
+};
+
+function parseCssHex(hex: string | null | undefined): [number, number, number] | null {
+  if (!hex || typeof hex !== "string") return null;
+  const n = hex.trim().replace(/^#/, "");
+  if (n.length !== 6 || !/^[0-9a-fA-F]+$/.test(n)) return null;
+  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
+
+/** Maps a course hex color to the closest Google Calendar event `colorId`. */
+function googleCalendarColorIdFromHex(
+  hex: string | null | undefined
+): string {
+  const rgb = parseCssHex(hex ?? "");
+  if (!rgb) return "9";
+  let bestId = "9";
+  let bestDist = Infinity;
+  for (const [id, preset] of Object.entries(GCAL_PRESET_EVENT_COLORS)) {
+    const d =
+      (rgb[0] - preset[0]) ** 2 +
+      (rgb[1] - preset[1]) ** 2 +
+      (rgb[2] - preset[2]) ** 2;
+    if (d < bestDist) {
+      bestDist = d;
+      bestId = id;
+    }
+  }
+  return bestId;
+}
 
 function formatAllDay(due: Date): { start: string; end: string } {
   const y = due.getUTCFullYear();
@@ -182,6 +234,7 @@ function buildEventBody(d: DeadlinePayload) {
     start: { date: start },
     end: { date: end },
     status: "confirmed", // GCal has no "completed" status; we mark via summary prefix.
+    colorId: googleCalendarColorIdFromHex(d.courseColor),
     extendedProperties: {
       private: {
         [SS_PRIVATE_KEY]: SS_PRIVATE_VALUE,

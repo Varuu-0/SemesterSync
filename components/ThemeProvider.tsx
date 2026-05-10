@@ -30,12 +30,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
     const fromDom = document.documentElement.getAttribute("data-theme");
+    if (fromDom && !isThemeId(fromDom)) {
+      document.documentElement.removeAttribute("data-theme");
+      try {
+        window.localStorage.removeItem(THEME_STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+      setThemeState(DEFAULT_THEME);
+      return;
+    }
     if (fromDom && isThemeId(fromDom)) {
       setThemeState(fromDom);
       return;
     }
     try {
       const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored && !isThemeId(stored)) {
+        window.localStorage.removeItem(THEME_STORAGE_KEY);
+      }
       if (stored && isThemeId(stored)) {
         setThemeState(stored);
         document.documentElement.setAttribute("data-theme", stored);

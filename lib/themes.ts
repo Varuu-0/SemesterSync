@@ -3,7 +3,6 @@ export type ThemeId =
   | "dark"
   | "pokemon"
   | "pacman"
-  | "minecraft"
   | "destiny"
   | "marathon"
   | "fortnite";
@@ -40,12 +39,6 @@ export const THEMES: readonly Theme[] = [
     label: "Pac-Man",
     description: "Arcade waka waka",
     swatches: ["#000000", "#ffcc00", "#ff7eb9"],
-  },
-  {
-    id: "minecraft",
-    label: "Minecraft",
-    description: "Dirt, grass, diamond",
-    swatches: ["#4a3829", "#5a7d2a", "#00a898"],
   },
   {
     id: "destiny",

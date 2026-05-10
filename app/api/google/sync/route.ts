@@ -22,7 +22,7 @@ type DeadlineRow = {
   source_snippet: string | null;
   completed_at: string | null;
   google_event_id: string | null;
-  course: { name: string } | null;
+  course: { name: string; color: string } | null;
 };
 
 /**
@@ -117,7 +117,7 @@ export async function POST() {
     supabase
       .from("deadlines")
       .select(
-        "id, title, due_at, category, source_snippet, completed_at, google_event_id, course:courses!inner(name)"
+        "id, title, due_at, category, source_snippet, completed_at, google_event_id, course:courses!inner(name, color)"
       )
       .eq("user_id", user.id)
       .returns<DeadlineRow[]>(),
@@ -153,6 +153,7 @@ export async function POST() {
       id: d.id,
       title: d.title,
       courseName: d.course?.name,
+      courseColor: d.course?.color,
       due_at: d.due_at,
       category: d.category,
       source_snippet: d.source_snippet,
