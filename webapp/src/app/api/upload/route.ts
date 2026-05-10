@@ -153,42 +153,32 @@ export async function POST(req: NextRequest) {
       const fs = require('fs')
       const path = require('path')
       const envContent = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf-8')
-      const match = envContent.match(/^OPENROUTER_API_KEY=(.*)$/m)
+      const match = envContent.match(/^GEMINI_API_KEY=(.*)$/m)
       if (match) localEnvKey = match[1].trim()
     } catch (e) {}
 
-    const apiKey = localEnvKey || process.env.OPENROUTER_API_KEY
+    const apiKey = localEnvKey || process.env.GEMINI_API_KEY
     
     if (!apiKey) {
-      throw new Error('OPENROUTER_API_KEY is not set. Restart the dev server after adding it to .env.local.')
+      throw new Error('GEMINI_API_KEY is not set. Restart the dev server after adding it to .env.local.')
     }
     
-    console.log(`[${rid}] OpenRouter key loaded: ${apiKey.slice(0, 12)}...${apiKey.slice(-4)}`)
+    console.log(`[${rid}] Gemini key loaded: ${apiKey.slice(0, 12)}...${apiKey.slice(-4)}`)
     
-    const openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": "http://localhost:3000",
-        "X-Title": "SemesterSync",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "inclusionai/ring-2.6-1t:free",
-        messages: [
-          { role: "system", content: "You are an academic parser. NEVER output conversational text. Output ONLY valid JSON." },
-          { role: "user", content: PROMPT + '\n\n---SYLLABUS TEXT---\n\n' + syllabusText }
-        ]
-      })
+    const aiClient = new GoogleGenAI({ apiKey })
+
+    const response = await aiClient.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: [
+        { role: 'user', parts: [{ text: PROMPT + '\n\n---SYLLABUS TEXT---\n\n' + syllabusText }] }
+      ],
+      config: {
+        systemInstruction: "You are an academic parser. NEVER output conversational text. Output ONLY valid JSON.",
+        responseMimeType: "application/json",
+      }
     })
 
-    if (!openRouterResponse.ok) {
-      const errorText = await openRouterResponse.text()
-      throw new Error(`OpenRouter API Error: ${errorText}`)
-    }
-
-    const orData = await openRouterResponse.json()
-    let rawText = orData.choices[0]?.message?.content || ''
+    let rawText = response.text || ''
     
     // Strip markdown code fences if present (```json ... ```)
     rawText = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '')
