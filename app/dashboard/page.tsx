@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { CalendarView } from "@/components/CalendarView";
+import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { DeadlineRow } from "@/components/DeadlineRow";
 import { GoogleCalendarPanel } from "@/components/GoogleCalendarPanel";
 import { useCourses, useCoursesById, useDeadlines } from "@/lib/hooks";
@@ -58,6 +60,26 @@ export default function DashboardPage() {
     if (error) {
       mutateLocal(d.id, { completed_at: previous });
       alert(error.message);
+      return;
+    }
+
+    if (next) {
+      const heaviestId = metrics.heaviestCourse?.course.id;
+      const wasOnlyWeekTask =
+        metrics.upcomingThisWeek.some((x) => x.id === d.id) &&
+        metrics.upcomingThisWeek.filter((x) => x.id !== d.id).length === 0;
+      const heaviestHit = heaviestId != null && d.course_id === heaviestId;
+      if (wasOnlyWeekTask || heaviestHit) {
+        void import("canvas-confetti").then((mod) => {
+          mod.default({
+            particleCount: heaviestHit && wasOnlyWeekTask ? 90 : 55,
+            spread: 68,
+            origin: { y: 0.74 },
+            scalar: 0.9,
+            ticks: 120,
+          });
+        });
+      }
     }
   }
 
@@ -85,7 +107,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Header — stable while data loads */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-ink-900">Dashboard</h1>
@@ -111,9 +133,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {empty && <EmptyState />}
+      {loading && <DashboardSkeleton />}
 
-      {!empty && (
+      {!loading && empty && <DashboardEmptyState />}
+
+      {!loading && !empty && (
         <>
           {/* Metric cards */}
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -166,6 +190,37 @@ export default function DashboardPage() {
                     : "danger"
               }
               icon={<TargetIcon />}
+            />
+          </section>
+
+          {/* Calendar */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">
+                Calendar
+              </h2>
+              {courses.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {courses.map((c) => (
+                    <span
+                      key={c.id}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-ink-700 shadow-soft ring-1 ring-ink-200"
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: c.color }}
+                      />
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <GoogleCalendarPanel onEventsChange={setGoogleEvents} />
+            <CalendarView
+              deadlines={deadlines}
+              coursesById={coursesById}
+              googleEvents={googleEvents}
             />
           </section>
 
@@ -286,37 +341,6 @@ export default function DashboardPage() {
               </ul>
             </Section>
           )}
-
-          {/* Calendar */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-500">
-                Calendar
-              </h2>
-              {courses.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {courses.map((c) => (
-                    <span
-                      key={c.id}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-ink-700 shadow-soft ring-1 ring-ink-200"
-                    >
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ background: c.color }}
-                      />
-                      {c.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <GoogleCalendarPanel onEventsChange={setGoogleEvents} />
-            <CalendarView
-              deadlines={deadlines}
-              coursesById={coursesById}
-              googleEvents={googleEvents}
-            />
-          </section>
         </>
       )}
     </div>
@@ -412,26 +436,6 @@ function Placeholder({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-dashed border-ink-200 bg-surface p-6 text-center text-sm text-ink-500">
       {children}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="rounded-2xl border border-dashed border-ink-200 bg-surface p-10 text-center">
-      <h3 className="text-base font-semibold text-ink-900">
-        No deadlines yet
-      </h3>
-      <p className="mt-1 text-sm text-ink-500">
-        Add a course and upload its syllabus PDF — Gemini will pull every
-        assignment, quiz, and exam onto your dashboard.
-      </p>
-      <Link
-        href="/dashboard/courses"
-        className="mt-5 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90"
-      >
-        Add your first course
-      </Link>
     </div>
   );
 }

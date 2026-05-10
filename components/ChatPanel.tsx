@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MarkdownMessage } from "@/components/MarkdownMessage";
 import { supabaseBrowser } from "@/lib/supabase";
 import type { ChatMessage } from "@/lib/types";
 import { useAuth } from "./AuthProvider";
@@ -74,6 +75,52 @@ async function readChatSseStream(
   }
 
   return { message, error };
+}
+
+function groupChatMessages(messages: ChatMessage[]): {
+  label: string;
+  messages: ChatMessage[];
+}[] {
+  if (messages.length === 0) return [];
+  const groups: { label: string; messages: ChatMessage[] }[] = [];
+  let lastLabel = "";
+  for (const m of messages) {
+    const label = formatChatDayLabel(new Date(m.created_at));
+    if (label !== lastLabel) {
+      lastLabel = label;
+      groups.push({ label, messages: [m] });
+    } else {
+      groups[groups.length - 1].messages.push(m);
+    }
+  }
+  return groups;
+}
+
+function formatChatDayLabel(d: Date): string {
+  const sod = (x: Date) =>
+    new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const today = sod(new Date());
+  const day = sod(d);
+  const diffDays = Math.round((today - day) / (24 * 60 * 60 * 1000));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays >= 2 && diffDays < 7) {
+    return d.toLocaleDateString(undefined, { weekday: "long" });
+  }
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  if (sameYear) {
+    return d.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    });
+  }
+  return d.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export function ChatPanel({ stats }: { stats: Stats }) {
@@ -282,8 +329,8 @@ export function ChatPanel({ stats }: { stats: Stats }) {
   }
 
   return (
-    <div className="flex h-[70vh] flex-col rounded-2xl border border-ink-200 bg-surface shadow-soft">
-      <div className="flex items-center gap-3 border-b border-ink-200 px-4 py-3">
+    <div className="flex h-[70vh] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-ink-200 bg-surface shadow-soft">
+      <div className="flex shrink-0 items-center gap-3 border-b border-ink-200 px-4 py-3">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[10px] font-bold text-primary-fg">
           AI
         </span>
@@ -306,18 +353,33 @@ export function ChatPanel({ stats }: { stats: Stats }) {
         )}
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3"
+      >
         {loading ? (
           <ChatThreadSkeleton />
         ) : messages.length === 0 ? (
           <EmptyState stats={stats} onPick={(s) => setText(s)} />
         ) : (
-          messages.map((m) => (
-            <Bubble
-              key={m.id}
-              message={m}
-              onDelete={() => deleteMessage(m.id)}
-            />
+          groupChatMessages(messages).map((group) => (
+            <div
+              key={`${group.label}-${group.messages[0]?.id ?? ""}`}
+              className="space-y-3"
+            >
+              <div className="flex justify-center py-0.5">
+                <span className="rounded-full bg-ink-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink-500">
+                  {group.label}
+                </span>
+              </div>
+              {group.messages.map((m) => (
+                <Bubble
+                  key={m.id}
+                  message={m}
+                  onDelete={() => deleteMessage(m.id)}
+                />
+              ))}
+            </div>
           ))
         )}
         {streamReply !== null && (
@@ -326,7 +388,7 @@ export function ChatPanel({ stats }: { stats: Stats }) {
       </div>
 
       {error && (
-        <div className="border-t border-red-100 bg-red-50 px-4 py-2 text-xs text-red-700">
+        <div className="shrink-0 border-t border-red-100 bg-red-50 px-4 py-2 text-xs text-red-700">
           {error}
         </div>
       )}
@@ -336,7 +398,7 @@ export function ChatPanel({ stats }: { stats: Stats }) {
           e.preventDefault();
           send();
         }}
-        className="flex items-center gap-2 border-t border-ink-200 px-3 py-3"
+        className="flex shrink-0 items-center gap-2 border-t border-ink-200 px-3 py-3"
       >
         <input
           ref={inputRef}
@@ -441,7 +503,11 @@ function Bubble({
             SemesterSync AI
           </div>
         )}
-        <div className="whitespace-pre-wrap break-words">{message.text}</div>
+        {isAssistant ? (
+          <MarkdownMessage text={message.text} variant="assistant" />
+        ) : (
+          <div className="whitespace-pre-wrap break-words">{message.text}</div>
+        )}
         <div
           className={`mt-1 flex items-center gap-2 text-[10px] ${
             isAssistant ? "text-ink-400" : "text-primary-fg/70"
@@ -486,7 +552,7 @@ function StreamingAssistantBubble({ text }: { text: string }) {
             <Dot delay="240ms" />
           </div>
         ) : (
-          <div className="whitespace-pre-wrap break-words text-ink-900">{text}</div>
+          <MarkdownMessage text={text} variant="assistant" />
         )}
       </div>
     </div>

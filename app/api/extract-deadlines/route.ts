@@ -1,19 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   compactSyllabusWhitespace,
   geminiThinkingGenerationSlice,
 } from "@/lib/geminiGeneration";
 import { DEADLINE_CATEGORIES } from "@/lib/types";
 
+const extractDeadlinesBodySchema = z.object({
+  text: z.string().max(120_000),
+  courseName: z.string().max(400).optional(),
+  fileName: z.string().max(400).optional(),
+  referenceDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+    .optional(),
+});
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-type Body = {
-  text: string;
-  courseName?: string;
-  fileName?: string;
-  referenceDate?: string;
-};
 
 type ModelResponse = {
   term?: {
@@ -52,14 +56,32 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: Body;
+  let bodyJson: unknown;
   try {
-    body = (await request.json()) as Body;
+    bodyJson = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const text = (body.text ?? "").trim();
+  const parsedBody = extractDeadlinesBodySchema.safeParse(bodyJson);
+  if (!parsedBody.success) {
+    const issue = parsedBody.error.flatten().fieldErrors;
+    const hint =
+      issue.text?.[0] ??
+      issue.referenceDate?.[0] ??
+      "Check syllabus text size and date format (YYYY-MM-DD).";
+    return NextResponse.json(
+      {
+        error:
+          "We couldn’t read that request. If your syllabus is huge, try a smaller PDF or trim pasted text.",
+        detail: hint,
+      },
+      { status: 400 }
+    );
+  }
+
+  const body = parsedBody.data;
+  const text = body.text.trim();
   if (!text) {
     return NextResponse.json({ error: "Empty syllabus text." }, { status: 400 });
   }
@@ -149,16 +171,16 @@ export async function POST(request: Request) {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
   };
 
-  const raw =
+  const geminiRaw =
     json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ??
     "";
-  if (!raw) {
+  if (!geminiRaw) {
     return NextResponse.json({ deadlines: [], term: null });
   }
 
   let parsed: ModelResponse;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(geminiRaw);
   } catch {
     return NextResponse.json(
       { error: "Gemini returned invalid JSON." },
