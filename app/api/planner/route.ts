@@ -71,7 +71,7 @@ Rules:
 - estimateMinutes optional but preferred.
 `;
 
-  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
+  const model = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
   const rawPlannerMax = Number(process.env.GEMINI_PLANNER_MAX_TOKENS ?? "8192");
   const plannerMaxTokens =
     Number.isFinite(rawPlannerMax) && rawPlannerMax > 0 ? Math.floor(rawPlannerMax) : 8192;

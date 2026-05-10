@@ -48,7 +48,7 @@ function maxSyllabusInputChars(): number {
   return Math.min(parsed, 120_000);
 }
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
 // Allow a deadline to fall up to this many days outside the inferred term
 // before we drop it as a hallucination.
 const TERM_SLACK_DAYS = 21;

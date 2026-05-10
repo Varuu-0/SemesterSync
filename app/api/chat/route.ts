@@ -20,7 +20,7 @@ type Body = {
   message?: string;
 };
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
 const MAX_HISTORY = 12;
 const PAST_WINDOW_DAYS = 14;
 const FUTURE_WINDOW_DAYS = 120;
