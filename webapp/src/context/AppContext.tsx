@@ -89,7 +89,33 @@ export function AppContextProvider({ children }: { children: ReactNode }) {
       courseId: courseIdMap[m.courseId] || m.courseId
     }))
 
-    if (uniqueCourses.length > 0) setCourses(prev => [...prev, ...uniqueCourses])
+    if (uniqueCourses.length > 0) {
+      setCourses(prev => {
+        // Find colors that are already in use
+        const usedColors = new Set(prev.map(c => c.color))
+        
+        const assignedCourses = uniqueCourses.map(c => {
+          // Filter to only unused colors
+          let availableColors = COURSE_COLORS.filter(color => !usedColors.has(color.bg))
+          
+          // If all 8 colors are used up, just pick from the full list again
+          if (availableColors.length === 0) {
+            availableColors = COURSE_COLORS
+          }
+          
+          // Pick a random available color
+          const pick = availableColors[Math.floor(Math.random() * availableColors.length)]
+          
+          // Mark it as used so the next imported course in this batch doesn't use it
+          usedColors.add(pick.bg)
+          
+          return { ...c, color: pick.bg, textColor: pick.text }
+        })
+        
+        return [...prev, ...assignedCourses]
+      })
+    }
+    
     if (uniqueEvents.length > 0) setEvents(prev => [...prev, ...uniqueEvents])
     if (uniqueMaterials.length > 0) setMaterials(prev => [...prev, ...uniqueMaterials])
   }
