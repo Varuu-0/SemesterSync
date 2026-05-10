@@ -1,22 +1,24 @@
-import { AppEvent } from '@/context/AppContext'
+import type { Deadline, Course } from '@/lib/types'
 import * as ics from 'ics'
 
-export const exportToICS = (events: AppEvent[]) => {
-  if (!events || events.length === 0) return
+export const exportToICS = (deadlines: Deadline[], courses: Course[]) => {
+  if (!deadlines || deadlines.length === 0) return
 
-  const icsEvents: ics.EventAttributes[] = events.map(event => {
-    // Parse the date (assuming format YYYY-MM-DD or similar)
-    const dateObj = new Date(event.date)
+  const courseMap = new Map(courses.map(c => [c.id, c]))
+
+  const icsEvents: ics.EventAttributes[] = deadlines.map(d => {
+    const dateObj = new Date(d.due_at)
     const year = dateObj.getFullYear()
     const month = dateObj.getMonth() + 1
     const day = dateObj.getDate()
+    const course = courseMap.get(d.course_id)
 
     return {
-      start: [year, month, day, 9, 0], // Defaulting to 9 AM
-      duration: { hours: 1 }, // Default 1 hour duration
-      title: `${event.courseId} - ${event.title}`,
-      description: event.description,
-      categories: [event.type],
+      start: [year, month, day, 9, 0],
+      duration: { hours: 1 },
+      title: `${course?.name ?? 'Course'} - ${d.title}`,
+      description: d.source_snippet ?? '',
+      categories: [d.category ?? 'other'],
     }
   })
 

@@ -45,6 +45,9 @@ export default function RootLayout({
         <div className="relative z-10 flex flex-col min-h-full">
           <Providers>{children}</Providers>
         </div>
+
+        {/* Toast Notifications */}
+        <script dangerouslySetInnerHTML={{ __html: '' }} />
       </body>
     </html>
   );

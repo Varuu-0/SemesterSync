@@ -1,0 +1,52 @@
+{
+  "project": "SemesterSync",
+  "version": "1.0.0",
+  "description": "AI-powered semester management - merge of Varunjit, Owen, and Sukhman branches",
+  "framework": "next.js",
+  "stack": {
+    "framework": "Next.js 15",
+    "language": "TypeScript",
+    "styling": "Tailwind CSS",
+    "database": "Supabase",
+    "ai": "Gemini 3.1 Flash Lite",
+    "auth": "Supabase OAuth (Google)"
+  },
+  "commands": {
+    "dev": "npm run dev",
+    "build": "npm run build",
+    "lint": "npm run lint",
+    "typecheck": "npx tsc --noEmit"
+  },
+  "env": {
+    "required": [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "GEMINI_API_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY"
+    ],
+    "optional": [
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET"
+    ]
+  },
+  "features": {
+    "glassmorphism_theme": true,
+    "multi_theme_presets": true,
+    "fullcalendar": true,
+    "timeline_view": true,
+    "ai_task_breakdown": true,
+    "ai_chat_streaming": true,
+    "doom_week_detector": true,
+    "gpa_predictor": true,
+    "semester_roast": true,
+    "smart_planner": true,
+    "supabase_persistence": true,
+    "google_calendar_sync": true,
+    "ics_export": true,
+    "deadline_completion_tracking": true,
+    "toast_notifications": true,
+    "skeleton_loaders": true,
+    "course_color_customization": true,
+    "syllabus_cache_dedup": true
+  }
+}

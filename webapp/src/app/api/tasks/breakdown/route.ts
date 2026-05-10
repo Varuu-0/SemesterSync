@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { title, description, weight } = body
+    const { title, description } = body
 
     if (!title) {
       return NextResponse.json({ error: 'Missing title' }, { status: 400 })
@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
       The user needs to complete the following assignment:
       Title: ${title}
       Description: ${description || 'No description provided.'}
-      Weight: ${weight ? weight + '%' : 'Unknown'}
 
       Evaluate the scope of this assignment. Recursively break it down into a tree of actionable sub-tasks.
       If it's a small task (e.g. a reading), 1 level of depth is fine.

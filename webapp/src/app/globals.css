@@ -19,7 +19,6 @@
   --color-course-purple-bg: #f5f3ff;
 }
 
-/* Custom Scrollbar for a cleaner feel */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -39,4 +38,169 @@
   body {
     @apply bg-[#0c0e14] text-white;
   }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.15; }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* ── FullCalendar Dark Theme ─────────────────────────────────────────── */
+.fc {
+  background: transparent;
+  color: white;
+  --fc-border-color: rgba(255, 255, 255, 0.1);
+  --fc-today-bg-color: rgba(96, 165, 250, 0.08);
+  --fc-neutral-bg-color: transparent;
+  --fc-page-bg-color: transparent;
+}
+
+.fc .fc-daygrid-day {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.fc .fc-daygrid-day:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fc .fc-col-header {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.fc .fc-col-header-cell {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 0;
+}
+
+.fc .fc-toolbar-title {
+  color: white;
+  font-weight: 300;
+}
+
+.fc .fc-button {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 8px !important;
+  padding: 4px 12px !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+}
+
+.fc .fc-button:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+}
+
+.fc .fc-button-active {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+}
+
+.fc .fc-daygrid-day-number {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+}
+
+.fc .fc-daygrid-event {
+  border-radius: 6px;
+  font-size: 0.7rem;
+  padding: 1px 4px;
+  border: none !important;
+}
+
+.fc .fc-daygrid-event .fc-event-title {
+  font-weight: 500;
+}
+
+/* Google Calendar overlay events — dotted border to distinguish */
+.fc .fc-event.gcal-overlay {
+  border: 1px dashed rgba(255, 255, 255, 0.4) !important;
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.fc .fc-timegrid-slot {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.fc .fc-timegrid-slot-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.7rem;
+}
+
+.fc .fc-scrollgrid {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── Chat Markdown ───────────────────────────────────────────────────── */
+.prose-invert {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.prose-invert p {
+  margin-bottom: 0.5rem;
+}
+
+.prose-invert code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.prose-invert pre {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.prose-invert ul,
+.prose-invert ol {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+
+.prose-invert li {
+  margin: 0.2rem 0;
+}
+
+.prose-invert a {
+  color: var(--theme-accent, #60a5fa);
+  text-decoration: underline;
+}
+
+.prose-invert blockquote {
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  padding-left: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+.prose-invert h1,
+.prose-invert h2,
+.prose-invert h3 {
+  color: white;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-invert strong {
+  color: white;
+  font-weight: 600;
 }

@@ -1,14 +1,21 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { UploadCloud, FileText, ArrowRight, Cpu, CheckCircle2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useAppContext } from '@/context/AppContext'
+import { useAuth } from '@/hooks/useAuth'
+import { supabaseBrowser } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
 export function UploadModal({ onUploadSuccess }: { onUploadSuccess?: (data: any) => void }) {
-  const { addExtractedData } = useAppContext()
+  const { loadFromSupabase } = useAppContext()
+  const { user } = useAuth()
+  const onUploadSuccessRef = useRef(onUploadSuccess)
+  onUploadSuccessRef.current = onUploadSuccess
+  const userIdRef = useRef<string | undefined>(user?.id)
+  useEffect(() => { userIdRef.current = user?.id }, [user?.id])
   const [files, setFiles] = useState<File[]>([])
   const [appState, setAppState] = useState<'UPLOAD' | 'PROCESSING'>('UPLOAD')
   const [isHovered, setIsHovered] = useState(false)
@@ -60,6 +67,7 @@ export function UploadModal({ onUploadSuccess }: { onUploadSuccess?: (data: any)
           limit(async () => {
             const formData = new FormData()
             formData.append('file', file)
+            if (userIdRef.current) formData.append('userId', userIdRef.current)
 
             const response = await fetch('/api/upload', {
               method: 'POST',
@@ -73,8 +81,6 @@ export function UploadModal({ onUploadSuccess }: { onUploadSuccess?: (data: any)
 
             const result = await response.json()
             if (result.data) {
-              // Add to state IMMEDIATELY as each file finishes
-              addExtractedData(result.data)
               return result.data
             }
             return null
@@ -86,9 +92,68 @@ export function UploadModal({ onUploadSuccess }: { onUploadSuccess?: (data: any)
       clearInterval(timer);
       setScanStep(scanSteps.length);
 
+      const uid = userIdRef.current
+      if (uid) {
+        const supabase = supabaseBrowser()
+
+        const { data: existingCourses } = await supabase
+          .from('courses')
+          .select('id, name')
+          .eq('user_id', uid)
+
+        const courseNameToId = new Map<string, string>()
+        for (const c of (existingCourses ?? [])) {
+          courseNameToId.set(c.name, c.id)
+        }
+
+        const seenCourseNames = new Set<string>()
+        for (const result of allResults) {
+          if (!result?.courses) continue
+          for (const c of result.courses) {
+            if (seenCourseNames.has(c.name) || courseNameToId.has(c.name)) continue
+            seenCourseNames.add(c.name)
+            const { data, error } = await supabase
+              .from('courses')
+              .insert({ user_id: uid, name: c.name, color: c.color || '#3b82f6' })
+              .select()
+              .single()
+            if (data && !error) {
+              courseNameToId.set(c.name, data.id)
+            } else if (error) {
+              console.error('Course insert failed:', error)
+            }
+          }
+        }
+
+        const allDeadlines: { user_id: string; course_id: string; title: string; due_at: string; category: string }[] = []
+        for (const result of allResults) {
+          if (!result?.events) continue
+          for (const e of result.events) {
+            const tempCourse = result.courses?.find((c: any) => c.id === e.courseId)
+            const realCourseId = tempCourse ? courseNameToId.get(tempCourse.name) : undefined
+            if (realCourseId) {
+              allDeadlines.push({
+                user_id: uid,
+                course_id: realCourseId,
+                title: e.title,
+                due_at: e.date,
+                category: e.type || 'assignment',
+              })
+            }
+          }
+        }
+
+        if (allDeadlines.length > 0) {
+          const { error: dErr } = await supabase.from('deadlines').insert(allDeadlines)
+          if (dErr) console.error('Deadline insert failed:', dErr)
+        }
+
+        await loadFromSupabase(uid)
+      }
+
       setTimeout(() => {
-        if (onUploadSuccess) {
-          onUploadSuccess(allResults.filter(Boolean))
+        if (onUploadSuccessRef.current) {
+          onUploadSuccessRef.current(allResults.filter(Boolean))
         }
       }, 800);
 

@@ -1,229 +1,642 @@
-'use client';
+'use client'
 
-import { motion } from 'motion/react';
-import { AlertCircle, CalendarClock, Zap, CheckCircle2 } from 'lucide-react';
-import { format, addDays } from 'date-fns';
-import { useAppContext } from '@/context/AppContext';
+import { useMemo, useState, useEffect } from 'react'
+import Link from 'next/link'
+import { motion } from 'motion/react'
+import { format } from 'date-fns'
+import { useAppContext } from '@/context/AppContext'
+import { useAuth } from '@/hooks/useAuth'
+import { computeMetrics, type CourseWorkload } from '@/lib/dashboardMetrics'
+import { CATEGORY_LABELS, type Course, type Deadline, type GoogleCalendarEvent } from '@/lib/types'
+import { DashboardSkeleton } from '@/components/DashboardSkeleton'
+import { DashboardEmptyState } from '@/components/dashboard/DashboardEmptyState'
+import { DeadlineRow } from '@/components/DeadlineRow'
+import { CalendarView } from '@/components/CalendarView'
+import GoogleCalendarPanel from '@/components/GoogleCalendarPanel'
+import { exportToICS } from '@/lib/exportIcs'
+import {
+  Clock, AlertTriangle, Target, TrendingUp, Download,
+  ChevronUp, ChevronDown, DownloadCloud,
+} from 'lucide-react'
+import { supabaseBrowser } from '@/lib/supabase'
 
-const bgColors: Record<string, string> = {
-  blue: 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
-  green: 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/30',
-  red: 'bg-rose-500/20 text-rose-300 ring-rose-500/30',
-  purple: 'bg-purple-500/20 text-purple-300 ring-purple-500/30',
-  orange: 'bg-orange-500/20 text-orange-300 ring-orange-500/30',
-  pink: 'bg-pink-500/20 text-pink-300 ring-pink-500/30',
-  indigo: 'bg-indigo-500/20 text-indigo-300 ring-indigo-500/30',
-  cyan: 'bg-cyan-500/20 text-cyan-300 ring-cyan-500/30',
-  slate: 'bg-slate-500/20 text-slate-300 ring-slate-500/30'
-};
+const UPCOMING_VISIBLE = 8
+const MISSED_VISIBLE = 5
+const COMPLETED_VISIBLE = 5
 
-const dotColors: Record<string, string> = {
-  blue: 'bg-blue-500',
-  green: 'bg-emerald-500',
-  red: 'bg-rose-500',
-  purple: 'bg-purple-500',
-  orange: 'bg-orange-500',
-  pink: 'bg-pink-500',
-  indigo: 'bg-indigo-500',
-  cyan: 'bg-cyan-500',
-  slate: 'bg-slate-500'
-};
+export default function DashboardPage() {
+  const { courses, deadlines, dataLoading, toggleDeadlineCompletion, loadFromSupabase } = useAppContext()
+  const { user, loading: authLoading } = useAuth()
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false)
+  const [showAllMissed, setShowAllMissed] = useState(false)
+  const [completedOpen, setCompletedOpen] = useState(false)
+  const [busyIds, setBusyIds] = useState<Record<string, boolean>>({})
+  const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([])
 
-export default function DashboardOverviewPage() {
-  const { events, courses } = useAppContext();
-  
-  // Sort events by date to get upcoming ones
-  const upcomingEvents = [...events]
-    .filter(e => new Date(e.date) >= new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 4);
+  useEffect(() => {
+    if (user?.id) loadFromSupabase(user.id)
+  }, [user?.id, loadFromSupabase])
+
+  const metrics = useMemo(
+    () => computeMetrics(courses, deadlines),
+    [courses, deadlines],
+  )
+
+  const coursesById = useMemo(() => {
+    const m: Record<string, Course> = {}
+    courses.forEach(c => { m[c.id] = c })
+    return m
+  }, [courses])
+
+  async function toggleCompleted(d: Deadline, next: boolean) {
+    const nextValue = next ? new Date().toISOString() : null
+    const previous = d.completed_at
+    setBusyIds(prev => ({ ...prev, [d.id]: true }))
+    toggleDeadlineCompletion(d.id, next, user?.id || '')
+    const supabase = supabaseBrowser()
+    const { error } = await supabase
+      .from('deadlines')
+      .update({ completed_at: nextValue })
+      .eq('id', d.id)
+    setBusyIds(prev => {
+      const { [d.id]: _, ...rest } = prev
+      return rest
+    })
+    if (error) {
+      toggleDeadlineCompletion(d.id, !!previous, user?.id || '')
+    }
+    if (next) {
+      const heaviestId = metrics.heaviestCourse?.course.id
+      const wasOnlyWeekTask =
+        metrics.upcomingThisWeek.some(x => x.id === d.id) &&
+        metrics.upcomingThisWeek.filter(x => x.id !== d.id).length === 0
+      const heaviestHit = heaviestId != null && d.course_id === heaviestId
+      if (wasOnlyWeekTask || heaviestHit) {
+        void import('canvas-confetti').then(mod => {
+          mod.default({
+            particleCount: heaviestHit && wasOnlyWeekTask ? 90 : 55,
+            spread: 68,
+            origin: { y: 0.74 },
+            scalar: 0.9,
+            ticks: 120,
+          })
+        })
+      }
+    }
+  }
+
+  function exportIcs() {
+    if (deadlines.length === 0) {
+      alert('No deadlines yet. Upload a syllabus PDF on the Courses page.')
+      return
+    }
+    exportToICS(deadlines, courses)
+  }
+
+  const loading = authLoading || dataLoading
+  const empty = !loading && deadlines.length === 0
+
+  const upcomingList = showAllUpcoming
+    ? metrics.upcoming
+    : metrics.upcoming.slice(0, UPCOMING_VISIBLE)
+  const missedList = showAllMissed
+    ? metrics.missed
+    : metrics.missed.slice(0, MISSED_VISIBLE)
+  const completedList = completedOpen
+    ? metrics.completed
+    : metrics.completed.slice(0, COMPLETED_VISIBLE)
+
+  if (loading) return <DashboardSkeleton />
 
   return (
-    <div className="flex-1 w-full p-8 lg:p-12 overflow-y-auto">
-      <div className="max-w-5xl mx-auto space-y-8">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <motion.h1 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-4xl font-light tracking-tight text-white mb-1 font-display"
-            >
-              Semester <span className="font-semibold">Overview</span>
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="text-white/40 text-sm"
-            >
-              Here's how your next few weeks are shaping up.
-            </motion.p>
-          </div>
-          
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white/5 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-2"
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <motion.h1
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-2xl font-semibold text-white"
           >
-            <Zap className="text-yellow-400 fill-yellow-400 z-10" size={18} />
-            <div className="text-xs font-medium text-white tracking-widest uppercase">
-              <span className="text-white/40 font-normal mr-2">System Note:</span>
-              AI Tracking Active
-            </div>
-          </motion.div>
+            Dashboard
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="mt-1 text-sm text-white/40"
+          >
+            Your semester at a glance: workload, what&apos;s next, and what you&apos;ve already crushed.
+          </motion.p>
         </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/courses"
+            className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition-all"
+          >
+            Manage courses
+          </Link>
+          <button
+            type="button"
+            onClick={exportIcs}
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-all hover:opacity-90"
+            style={{
+              background: 'linear-gradient(to top right, var(--theme-brand-from), var(--theme-brand-to))',
+            }}
+          >
+            Export .ics
+          </button>
+        </div>
+      </div>
 
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Column: Timeline */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Actionable Week Card */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[32px] p-8 relative overflow-hidden flex flex-col justify-between"
-            >
-              <div className="flex justify-between items-start mb-6 relative z-20">
-                <span className="text-blue-400 text-xs font-bold uppercase tracking-widest block">Main Viewport</span>
-                <span className="text-xs font-medium bg-white/10 text-white/60 px-3 py-1 rounded-full border border-white/10">Upcoming</span>
-              </div>
-              <h2 className="text-3xl font-medium leading-tight max-w-md mb-8 relative z-20 text-white">Your AI Recommended Plan.</h2>
-              <div className="space-y-4 relative z-20">
-                {upcomingEvents.length === 0 ? (
-                  <p className="text-white/40 italic">No upcoming assignments. Upload a syllabus to get started.</p>
-                ) : (
-                  upcomingEvents.map((task, i) => {
-                    const course = courses.find(c => c.id === task.courseId);
-                    if (!course) return null;
+      {empty && <DashboardEmptyState />}
+
+      {!empty && (
+        <>
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          >
+            <MetricCard
+              label="Upcoming this week"
+              value={metrics.upcomingThisWeek.length}
+              hint={
+                metrics.nextDeadline
+                  ? `Next: ${formatShort(new Date(metrics.nextDeadline.due_at))}`
+                  : 'Nothing on deck'
+              }
+              tone="default"
+              icon={<ClockIcon />}
+            />
+            <MetricCard
+              label="Missed"
+              value={metrics.missed.length}
+              hint={
+                metrics.missed.length === 0
+                  ? 'All caught up'
+                  : 'Past due, not checked off'
+              }
+              tone={metrics.missed.length > 0 ? 'danger' : 'good'}
+              icon={<AlertIcon />}
+            />
+            <MetricCard
+              label="Heaviest course (30d)"
+              value={metrics.heaviestCourse?.upcoming ?? 0}
+              hint={
+                metrics.heaviestCourse
+                  ? metrics.heaviestCourse.course.name
+                  : 'No upcoming deadlines'
+              }
+              accentColor={metrics.heaviestCourse?.course.color}
+              icon={<StackIcon />}
+            />
+            <MetricCard
+              label="On-time rate"
+              value={`${Math.round(metrics.completionRate * 100)}%`}
+              hint={
+                metrics.completedCount + metrics.missed.length === 0
+                  ? 'Nothing graded yet'
+                  : `${metrics.completedCount} done · ${metrics.missed.length} missed`
+              }
+              tone={
+                metrics.completionRate >= 0.8
+                  ? 'good'
+                  : metrics.completionRate >= 0.5
+                    ? 'default'
+                    : 'danger'
+              }
+              icon={<TargetIcon />}
+            />
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-white/40">
+                Calendar
+              </h2>
+              {courses.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {courses.map(c => {
+                    const hex = c.color
                     return (
-                      <motion.div 
-                        key={task.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.4 + i * 0.1 }}
-                        className="group flex items-start sm:items-center justify-between p-4 rounded-xl border border-white/10 hover:border-white/20 hover:bg-white/5 backdrop-blur-sm transition-all"
+                      <span
+                        key={c.id}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2 py-0.5 text-[11px] font-medium text-white/60 ring-1 ring-white/10"
                       >
-                        <div className="flex gap-4 items-center">
-                          <button className="flex-shrink-0 w-6 h-6 rounded border border-white/20 group-hover:border-blue-400 transition-colors flex items-center justify-center bg-white/5">
-                            {/* Unchecked box */}
-                          </button>
-                          <div>
-                            <p className="font-medium text-white leading-tight mb-1">{task.title}</p>
-                            <div className="flex items-center gap-3 text-xs">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-medium ring-1 ring-inset ${bgColors[course.color.replace('bg-', '').replace('-500', '')] || bgColors.blue}`}>
-                                {course.code || course.name.substring(0, 8)}
-                              </span>
-                              <span className="text-white/40 font-mono">
-                                Due {format(new Date(task.date), 'MMM d, h:mm a')}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="hidden sm:block text-right">
-                          <div className="text-[10px] uppercase tracking-wider text-white/40 mt-0.5">{task.weight}% of grade</div>
-                        </div>
-                      </motion.div>
-                    )
-                  })
-                )}
-              </div>
-              {/* Decorative Element */}
-              <div className="absolute bottom-[-50px] right-[-50px] w-64 h-64 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
-            </motion.div>
-
-          </div>
-
-          {/* Right Column: Alerts & Stats */}
-          <div className="space-y-6">
-            
-            {/* Academic Doom Week Alert */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-gradient-to-br from-red-500/20 to-rose-500/20 backdrop-blur-xl border border-red-500/20 rounded-[32px] p-6 text-white relative overflow-hidden flex flex-col"
-            >
-              {/* Decorative background circle */}
-              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white/5 blur-2xl pointer-events-none" />
-              
-              <div className="relative z-10 flex flex-col h-full justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle size={24} className="text-red-400" />
-                    <h3 className="font-medium text-xl">Doom Week Detected</h3>
-                  </div>
-                  <p className="text-red-200 text-xs font-mono mb-5 bg-red-500/20 inline-block px-2.5 py-1 rounded-md border border-red-500/30">
-                    Warning
-                  </p>
-                  
-                  <ul className="space-y-2 mb-6">
-                    <li className="flex items-center text-sm bg-white/5 border border-white/5 px-3 py-2 rounded-xl text-white/80">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 mr-2" />
-                      Check Calendar for Overlaps
-                    </li>
-                  </ul>
-                </div>
-                
-                <div className="bg-black/20 border border-white/10 text-white/90 p-4 rounded-2xl">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-white/40 mb-2">AI Suggestion</p>
-                  <p className="text-sm font-medium">Keep uploading syllabi so I can map out potential crunch periods and doom weeks.</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Workload Distribution */}
-            {courses.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 flex flex-col justify-between"
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <span className="text-xs text-white/40 font-bold uppercase tracking-tighter">Active Courses</span>
-                </div>
-                <div className="space-y-4">
-                  {courses.map((course, i) => {
-                    const colorKey = course.color.replace('bg-', '').replace('-500', '');
-                    const colorCode = dotColors[colorKey] || dotColors.blue;
-                    
-                    // Count events for this course to make a fake "workload" percentage
-                    const courseEvents = events.filter(e => e.courseId === course.id).length;
-                    const totalEvents = Math.max(events.length, 1);
-                    const pct = Math.round((courseEvents / totalEvents) * 100);
-
-                    return (
-                      <div key={course.id}>
-                        <div className="flex justify-between text-sm mb-1.5">
-                          <span className="font-medium text-white/80">{course.name}</span>
-                          <span className="text-white/40 font-mono">{pct}%</span>
-                        </div>
-                        <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                          <motion.div 
-                            className={`h-full rounded-full ${colorCode}`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 1, delay: 0.8 + i * 0.1 }}
-                          />
-                        </div>
-                      </div>
+                        <span className="h-2 w-2 rounded-full" style={{ background: hex }} />
+                        {c.name}
+                      </span>
                     )
                   })}
                 </div>
-              </motion.div>
+              )}
+            </div>
+            <GoogleCalendarPanel onEventsChange={setGoogleEvents} />
+            <CalendarView
+              deadlines={deadlines}
+              coursesById={coursesById}
+              googleEvents={googleEvents}
+            />
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="grid gap-4 lg:grid-cols-3"
+          >
+            <WorkloadByWeek metrics={metrics} />
+            <WorkloadByCourse workload={metrics.workloadByCourse} coursesCount={courses.length} />
+            <CategoryMix metrics={metrics} />
+          </motion.section>
+
+          <Section
+            title="Up next"
+            subtitle={`${metrics.upcoming.length} incomplete · sorted by due date`}
+            actions={
+              metrics.upcoming.length > UPCOMING_VISIBLE && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllUpcoming(v => !v)}
+                  className="text-xs font-medium text-white/40 hover:text-white/80 transition-colors"
+                >
+                  {showAllUpcoming
+                    ? 'Show top 8'
+                    : `Show all ${metrics.upcoming.length}`}
+                </button>
+              )
+            }
+          >
+            {metrics.upcoming.length === 0 ? (
+              <Placeholder>Nothing upcoming. Upload a fresh syllabus to get started.</Placeholder>
+            ) : (
+              <ul className="space-y-2">
+                {upcomingList.map(d => (
+                  <DeadlineRow
+                    key={d.id}
+                    deadline={d}
+                    course={courses.find(c => c.id === d.course_id)}
+                    variant="upcoming"
+                    busy={!!busyIds[d.id]}
+                    onToggle={(next) => toggleCompleted(d, next)}
+                  />
+                ))}
+              </ul>
             )}
+          </Section>
 
-          </div>
+          {metrics.missed.length > 0 && (
+            <Section
+              title="Missed"
+              subtitle={`${metrics.missed.length} past due — check off any you've actually finished`}
+              tone="danger"
+              actions={
+                metrics.missed.length > MISSED_VISIBLE && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllMissed(v => !v)}
+                    className="text-xs font-medium text-white/40 hover:text-white/80 transition-colors"
+                  >
+                    {showAllMissed
+                      ? `Show top ${MISSED_VISIBLE}`
+                      : `Show all ${metrics.missed.length}`}
+                  </button>
+                )
+              }
+            >
+              <ul className="space-y-2">
+                {missedList.map(d => (
+                  <DeadlineRow
+                    key={d.id}
+                    deadline={d}
+                    course={courses.find(c => c.id === d.course_id)}
+                    variant="missed"
+                    busy={!!busyIds[d.id]}
+                    onToggle={(next) => toggleCompleted(d, next)}
+                  />
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          {metrics.completed.length > 0 && (
+            <Section
+              title="Completed"
+              subtitle={`${metrics.completed.length} done · ${metrics.completedThisWeek} in the last 7 days`}
+              actions={
+                <button
+                  type="button"
+                  onClick={() => setCompletedOpen(v => !v)}
+                  className="text-xs font-medium text-white/40 hover:text-white/80 transition-colors"
+                >
+                  {completedOpen
+                    ? 'Collapse'
+                    : metrics.completed.length > COMPLETED_VISIBLE
+                      ? `Show all ${metrics.completed.length}`
+                      : 'Expand'}
+                </button>
+              }
+            >
+              <ul className="space-y-2">
+                {completedList.map(d => (
+                  <DeadlineRow
+                    key={d.id}
+                    deadline={d}
+                    course={courses.find(c => c.id === d.course_id)}
+                    variant="completed"
+                    busy={!!busyIds[d.id]}
+                    onToggle={(next) => toggleCompleted(d, next)}
+                  />
+                ))}
+              </ul>
+            </Section>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+function MetricCard({
+  label,
+  value,
+  hint,
+  tone = 'default',
+  icon,
+  accentColor,
+}: {
+  label: string
+  value: number | string
+  hint?: string
+  tone?: 'default' | 'good' | 'danger'
+  icon?: React.ReactNode
+  accentColor?: string
+}) {
+  const toneClass =
+    tone === 'danger'
+      ? 'text-red-400'
+      : tone === 'good'
+        ? 'text-emerald-400'
+        : 'text-white'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[24px] p-4 relative overflow-hidden"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-white/40">
+          {label}
         </div>
+        <span
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-white/50"
+          style={
+            accentColor
+              ? { background: `${accentColor}20`, color: accentColor }
+              : { background: 'rgba(255,255,255,0.05)' }
+          }
+        >
+          {icon}
+        </span>
+      </div>
+      <div className={`mt-2 text-3xl font-semibold tabular-nums ${toneClass}`}>
+        {value}
+      </div>
+      {hint && (
+        <div className="mt-1 truncate text-xs text-white/30">{hint}</div>
+      )}
+      <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full opacity-5 blur-2xl pointer-events-none" style={{ backgroundColor: accentColor || 'var(--theme-accent)' }} />
+    </motion.div>
+  )
+}
 
+function Section({
+  title,
+  subtitle,
+  actions,
+  tone,
+  children,
+}: {
+  title: string
+  subtitle?: string
+  actions?: React.ReactNode
+  tone?: 'danger'
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(true)
+  return (
+    <section>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <button onClick={() => setOpen(!open)} className="flex items-center gap-2 group">
+          <h2
+            className={`text-sm font-semibold uppercase tracking-wide ${
+              tone === 'danger' ? 'text-red-400' : 'text-white/40'
+            }`}
+          >
+            {title}
+          </h2>
+          {open ? <ChevronUp size={14} className="text-white/20" /> : <ChevronDown size={14} className="text-white/20" />}
+        </button>
+        {actions}
+      </div>
+      {open && children}
+    </section>
+  )
+}
+
+function Placeholder({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] backdrop-blur-xl p-6 text-center text-sm text-white/30">
+      {children}
+    </div>
+  )
+}
+
+function WorkloadByWeek({ metrics }: { metrics: ReturnType<typeof computeMetrics> }) {
+  const max = Math.max(1, ...metrics.workloadByWeek.map(w => w.count))
+  return (
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[24px] p-4">
+      <div className="text-xs font-semibold uppercase tracking-wide text-white/40">
+        Workload · next 4 weeks
+      </div>
+      <ul className="mt-3 space-y-2.5">
+        {metrics.workloadByWeek.map((w, i) => {
+          const pct = (w.count / max) * 100
+          return (
+            <li key={i} className="flex items-center gap-3 text-sm">
+              <span className="w-20 shrink-0 text-xs text-white/50">{w.label}</span>
+              <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/5">
+                <motion.span
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{ backgroundColor: 'var(--theme-accent)' }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.8, delay: i * 0.1 }}
+                />
+              </span>
+              <span className="w-6 text-right text-xs font-semibold tabular-nums text-white/60">
+                {w.count}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function WorkloadByCourse({
+  workload,
+  coursesCount,
+}: {
+  workload: CourseWorkload[]
+  coursesCount: number
+}) {
+  const top = workload.slice(0, 5)
+  const max = Math.max(1, ...top.map(w => w.upcoming))
+  return (
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[24px] p-4">
+      <div className="text-xs font-semibold uppercase tracking-wide text-white/40">
+        Workload · by course
+      </div>
+      {top.length === 0 ? (
+        <div className="mt-4 text-xs text-white/30">
+          {coursesCount === 0 ? 'Add courses to see this chart.' : 'No upcoming deadlines.'}
+        </div>
+      ) : (
+        <ul className="mt-3 space-y-2.5">
+          {top.map(w => {
+            const pct = (w.upcoming / max) * 100
+            const hex = w.course.color
+            return (
+              <li key={w.course.id} className="text-sm">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: hex }} />
+                    <span className="truncate text-xs font-medium text-white/70">{w.course.name}</span>
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-white/40">
+                    {w.upcoming}
+                    {w.missed > 0 && (
+                      <span className="ml-1 text-red-400">+{w.missed} missed</span>
+                    )}
+                  </span>
+                </div>
+                <span className="block h-1.5 overflow-hidden rounded-full bg-white/5">
+                  <motion.span
+                    className="block h-full rounded-full"
+                    style={{ width: `${pct}%`, background: hex }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.8 }}
+                  />
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function CategoryMix({ metrics }: { metrics: ReturnType<typeof computeMetrics> }) {
+  return (
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[24px] p-4">
+      <div className="text-xs font-semibold uppercase tracking-wide text-white/40">
+        Mix · next 30 days
+      </div>
+      {metrics.categoryBreakdown.length === 0 ? (
+        <div className="mt-4 text-xs text-white/30">Nothing in the next 30 days.</div>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {metrics.categoryBreakdown.map(c => (
+            <span
+              key={c.category}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-white/60"
+            >
+              <span className="capitalize">
+                {c.category === 'uncategorized'
+                  ? 'Other'
+                  : (CATEGORY_LABELS[c.category as keyof typeof CATEGORY_LABELS] ?? c.category)}
+              </span>
+              <span className="tabular-nums" style={{ color: 'var(--theme-accent)' }}>{c.count}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/10 pt-3 text-center">
+        <Stat label="Tracked" value={metrics.totalCount} />
+        <Stat label="Done" value={metrics.completedCount} />
+        <Stat label="Open" value={metrics.upcoming.length} />
       </div>
     </div>
-  );
+  )
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <div className="text-lg font-semibold tabular-nums text-white">{value}</div>
+      <div className="text-[10px] uppercase tracking-wide text-white/30">{label}</div>
+    </div>
+  )
+}
+
+function formatShort(d: Date): string {
+  return d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function ClockIcon() {
+  return (
+    <Svg>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </Svg>
+  )
+}
+function AlertIcon() {
+  return (
+    <Svg>
+      <path d="M12 3l10 18H2L12 3z" />
+      <path d="M12 10v5" />
+      <path d="M12 18v.01" />
+    </Svg>
+  )
+}
+function StackIcon() {
+  return (
+    <Svg>
+      <path d="M3 7l9-4 9 4-9 4-9-4z" />
+      <path d="M3 12l9 4 9-4" />
+      <path d="M3 17l9 4 9-4" />
+    </Svg>
+  )
+}
+function TargetIcon() {
+  return (
+    <Svg>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" />
+    </Svg>
+  )
+}
+function Svg({ children }: { children: React.ReactNode }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {children}
+    </svg>
+  )
 }
