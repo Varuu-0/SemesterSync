@@ -1,8 +1,21 @@
+export type GradeComponent = {
+  component: string;
+  weight: number;
+};
+
 export type Course = {
   id: string;
   user_id: string;
   name: string;
   color: string;
+  instructor: string | null;
+  semester: string | null;
+  office_hours: string | null;
+  lecture_topics: string[] | null;
+  grade_breakdown: GradeComponent[] | null;
+  late_policy: string | null;
+  attendance_policy: string | null;
+  academic_integrity_policy: string | null;
   pdf_storage_path: string | null;
   pdf_file_name: string | null;
   syllabus_text: string | null;
@@ -54,6 +67,8 @@ export type GoogleCalendarEvent = {
   htmlLink?: string;
   description?: string;
 };
+
+export type CalendarEventSource = "deadline" | "google" | "manual";
 
 export const CATEGORY_LABELS: Record<DeadlineCategory, string> = {
   assignment: "Assignment",

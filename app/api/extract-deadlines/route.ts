@@ -33,6 +33,10 @@ type ModelResponse = {
     dueDate: string;
     sourceSnippet?: string;
   }>;
+  gradeBreakdown?: Array<{
+    component: string;
+    weight: number | string;
+  }>;
 };
 
 /** Fewer input tokens → faster API calls; syllabi rarely need more than ~48k chars. */
@@ -48,6 +52,7 @@ const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 // Allow a deadline to fall up to this many days outside the inferred term
 // before we drop it as a hallucination.
 const TERM_SLACK_DAYS = 21;
+const MAX_GEMINI_RETRIES = 3;
 
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -157,20 +162,28 @@ export async function POST(request: Request) {
               propertyOrdering: ["title", "category", "dueDate", "sourceSnippet"],
             },
           },
+          gradeBreakdown: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                component: { type: "STRING" },
+                weight: { type: "NUMBER" },
+              },
+              required: ["component", "weight"],
+              propertyOrdering: ["component", "weight"],
+            },
+          },
         },
-        required: ["term", "deadlines"],
-        propertyOrdering: ["term", "deadlines"],
+        required: ["term", "deadlines", "gradeBreakdown"],
+        propertyOrdering: ["term", "deadlines", "gradeBreakdown"],
       },
     },
   };
 
   let res: Response;
   try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(requestBody),
-    });
+    res = await fetchGeminiWithRetry(url, requestBody);
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to reach Gemini: ${(e as Error).message}` },
@@ -194,7 +207,7 @@ export async function POST(request: Request) {
     json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ??
     "";
   if (!geminiRaw) {
-    return NextResponse.json({ deadlines: [], term: null });
+    return NextResponse.json({ deadlines: [], term: null, gradeBreakdown: [] });
   }
 
   let parsed: ModelResponse;
@@ -214,9 +227,11 @@ export async function POST(request: Request) {
   const cleaned = (parsed.deadlines ?? [])
     .map((d) => normalize(d, termStart, termEnd))
     .filter((d): d is NormalizedDeadline => d !== null);
+  const gradeBreakdown = normalizeGradeBreakdown(parsed.gradeBreakdown ?? []);
 
   const payload = {
     deadlines: cleaned,
+    gradeBreakdown,
     term: {
       label: termLabel,
       termStart: termStart ? termStart.toISOString().slice(0, 10) : null,
@@ -232,6 +247,24 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(payload);
+}
+
+async function fetchGeminiWithRetry(
+  url: string,
+  requestBody: Record<string, unknown>
+) {
+  let waitMs = 500;
+  for (let attempt = 0; attempt <= MAX_GEMINI_RETRIES; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+    if (res.status !== 429 || attempt === MAX_GEMINI_RETRIES) return res;
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    waitMs *= 2;
+  }
+  throw new Error("Unreachable retry state.");
 }
 
 type NormalizedDeadline = {
@@ -286,6 +319,12 @@ For each deadline:
 
 De-duplicate identical items. Sort by dueDate ascending.
 
+STEP 3 — Extract grading breakdown percentages.
+- Return gradeBreakdown as an array of { component, weight }.
+- Include every grading component where a percentage weight is stated.
+- Convert weights to numbers (e.g. 25 not "25%").
+- Ignore non-graded informational percentages.
+
 Syllabus text:
 """
 ${args.text}
@@ -319,6 +358,23 @@ function normalize(
     dueAt: date.toISOString(),
     sourceSnippet: d.sourceSnippet?.slice(0, 280),
   };
+}
+
+function normalizeGradeBreakdown(
+  raw: Array<{ component: string; weight: number | string }>
+) {
+  return raw
+    .map((g) => ({
+      component: (g.component ?? "").trim().slice(0, 120),
+      weight:
+        typeof g.weight === "number"
+          ? g.weight
+          : Number.parseFloat(String(g.weight)),
+    }))
+    .filter(
+      (g) => g.component.length > 0 && Number.isFinite(g.weight) && g.weight > 0
+    )
+    .map((g) => ({ component: g.component, weight: Math.round(g.weight * 100) / 100 }));
 }
 
 function parseDate(value: string | null | undefined): Date | null {

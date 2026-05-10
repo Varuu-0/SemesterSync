@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { CourseForm } from "@/components/CourseForm";
+import { GoogleCalendarPanel } from "@/components/GoogleCalendarPanel";
 import { PdfUpload } from "@/components/PdfUpload";
 import { STORAGE_BUCKET, supabaseBrowser } from "@/lib/supabase";
 import { useCourses, useDeadlines } from "@/lib/hooks";
 import type { Course } from "@/lib/types";
+import { toast } from "sonner";
 
 export default function CoursesPage() {
   const { user } = useAuth();
@@ -23,10 +25,14 @@ export default function CoursesPage() {
       const supabase = supabaseBrowser();
       const { error } = await supabase
         .from("courses")
-        .insert({ user_id: user.id, name, color });
+        .insert({
+          user_id: user.id,
+          name,
+          color,
+        });
       if (error) throw error;
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -49,10 +55,11 @@ export default function CoursesPage() {
 
     const { error } = await supabase.from("courses").delete().eq("id", course.id);
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
     } else {
       removeCourseLocal(course.id);
       removeByCourseIdLocal(course.id);
+      toast.success(`Deleted ${course.name}`);
     }
   }
 
@@ -91,6 +98,16 @@ export default function CoursesPage() {
                     <div className="text-xs text-ink-500">
                       {count} deadline{count === 1 ? "" : "s"}
                     </div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {(course.grade_breakdown ?? []).slice(0, 3).map((g, idx) => (
+                        <span
+                          key={`${g.component}-${idx}`}
+                          className="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] text-ink-600"
+                        >
+                          {g.component} {g.weight}%
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -108,6 +125,7 @@ export default function CoursesPage() {
           })
         )}
       </div>
+      <GoogleCalendarPanel onEventsChange={() => {}} />
     </div>
   );
 }

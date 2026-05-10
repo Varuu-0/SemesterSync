@@ -11,12 +11,14 @@ import { GoogleCalendarPanel } from "@/components/GoogleCalendarPanel";
 import { useCourses, useCoursesById, useDeadlines } from "@/lib/hooks";
 import { buildIcs, downloadIcs } from "@/lib/ics";
 import { computeMetrics, type CourseWorkload } from "@/lib/dashboardMetrics";
+import { analyzeBurnout } from "@/lib/burnoutDetector";
 import { supabaseBrowser } from "@/lib/supabase";
 import {
   CATEGORY_LABELS,
   type Deadline,
   type GoogleCalendarEvent,
 } from "@/lib/types";
+import { toast } from "sonner";
 
 const UPCOMING_VISIBLE = 8;
 const MISSED_VISIBLE = 5;
@@ -34,12 +36,14 @@ export default function DashboardPage() {
     () => computeMetrics(courses, deadlines),
     [courses, deadlines]
   );
+  const burnout = useMemo(() => analyzeBurnout(deadlines), [deadlines]);
 
   const [busyIds, setBusyIds] = useState<Record<string, boolean>>({});
   const [completedOpen, setCompletedOpen] = useState(false);
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [showAllMissed, setShowAllMissed] = useState(false);
   const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [doomOpen, setDoomOpen] = useState(false);
 
   if (!user) return null;
 
@@ -59,7 +63,7 @@ export default function DashboardPage() {
     });
     if (error) {
       mutateLocal(d.id, { completed_at: previous });
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -85,7 +89,7 @@ export default function DashboardPage() {
 
   function exportIcs() {
     if (deadlines.length === 0) {
-      alert("No deadlines yet. Upload a syllabus PDF on the Courses page.");
+      toast.info("No deadlines yet. Upload a syllabus PDF on the Courses page.");
       return;
     }
     const content = buildIcs(deadlines, coursesById);
@@ -140,7 +144,7 @@ export default function DashboardPage() {
       {!loading && !empty && (
         <>
           {/* Metric cards */}
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <MetricCard
               label="Upcoming this week"
               value={metrics.upcomingThisWeek.length}
@@ -190,6 +194,12 @@ export default function DashboardPage() {
                     : "danger"
               }
               icon={<TargetIcon />}
+            />
+            <DoomMeterCard
+              burnout={burnout}
+              open={doomOpen}
+              onToggle={() => setDoomOpen((v) => !v)}
+              coursesById={coursesById}
             />
           </section>
 
@@ -394,6 +404,77 @@ function MetricCard({
       </div>
       {hint && (
         <div className="mt-1 truncate text-xs text-ink-500">{hint}</div>
+      )}
+    </div>
+  );
+}
+
+function DoomMeterCard({
+  burnout,
+  open,
+  onToggle,
+  coursesById,
+}: {
+  burnout: ReturnType<typeof analyzeBurnout>;
+  open: boolean;
+  onToggle: () => void;
+  coursesById: Record<string, { name: string }>;
+}) {
+  const peak = burnout.peakWeek;
+  const toneClass =
+    burnout.severity === "doom"
+      ? "text-red-600"
+      : burnout.severity === "critical"
+        ? "text-amber-600"
+        : burnout.severity === "busy"
+          ? "text-blue-600"
+          : "text-emerald-600";
+  return (
+    <div className="rounded-2xl border border-ink-200 bg-surface p-4 shadow-soft">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-ink-500">
+          Doom meter
+        </div>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="rounded-md border border-ink-200 px-2 py-1 text-[10px] font-semibold text-ink-600"
+        >
+          {open ? "Hide" : "Expand"}
+        </button>
+      </div>
+      <div className={`mt-2 text-2xl font-semibold tabular-nums ${toneClass}`}>
+        {peak ? `${peak.score}/20` : "0/20"}
+      </div>
+      <div className="mt-1 text-xs text-ink-500">
+        {peak
+          ? `Most cooked week: ${new Date(peak.startDate).toLocaleDateString()} · ${burnout.emoji} ${burnout.label}`
+          : "No cooked weeks right now"}
+      </div>
+      <div className="mt-2 h-1.5 rounded-full bg-ink-100">
+        <div
+          className="h-1.5 rounded-full bg-primary"
+          style={{ width: `${burnout.meterPercent}%` }}
+        />
+      </div>
+      {open && (
+        <div className="mt-3 space-y-2">
+          {(burnout.dangerWeeks.length ? burnout.dangerWeeks : burnout.allWeeks.slice(-3)).map(
+            (week) => (
+              <div key={week.isoWeek} className="rounded-lg border border-ink-200 p-2">
+                <div className="text-xs font-semibold text-ink-700">
+                  {week.isoWeek} · score {week.score}
+                </div>
+                <div className="mt-1 text-[11px] text-ink-500">
+                  {week.deadlines
+                    .slice(0, 3)
+                    .map((d) => `${d.title} (${coursesById[d.course_id]?.name ?? "Course"})`)
+                    .join(" · ")}
+                </div>
+              </div>
+            )
+          )}
+        </div>
       )}
     </div>
   );

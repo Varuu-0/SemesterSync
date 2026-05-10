@@ -315,3 +315,34 @@ body {
 [data-theme="marathon"] .fc .fc-toolbar-title {
   text-shadow: 0 0 14px rgb(var(--accent-rgb) / 0.35);
 }
+
+.glass-card {
+  background: rgb(var(--surface-rgb) / 0.7);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgb(var(--ink-200-rgb) / 0.7);
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.18),
+    transparent
+  );
+  animation: ss-shimmer 1.4s infinite;
+}
+
+@keyframes ss-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

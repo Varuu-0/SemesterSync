@@ -10,6 +10,14 @@ create table if not exists public.courses (
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
   color text not null,
+  instructor text,
+  semester text,
+  office_hours text,
+  lecture_topics text[] default '{}',
+  grade_breakdown jsonb not null default '[]'::jsonb,
+  late_policy text,
+  attendance_policy text,
+  academic_integrity_policy text,
   pdf_storage_path text,
   pdf_file_name text,
   syllabus_text text,
@@ -20,6 +28,14 @@ create index if not exists courses_user_id_idx on public.courses(user_id);
 
 -- Keep schema additive for projects already created from an earlier version.
 alter table public.courses add column if not exists syllabus_text text;
+alter table public.courses add column if not exists instructor text;
+alter table public.courses add column if not exists semester text;
+alter table public.courses add column if not exists office_hours text;
+alter table public.courses add column if not exists lecture_topics text[] default '{}';
+alter table public.courses add column if not exists grade_breakdown jsonb not null default '[]'::jsonb;
+alter table public.courses add column if not exists late_policy text;
+alter table public.courses add column if not exists attendance_policy text;
+alter table public.courses add column if not exists academic_integrity_policy text;
 
 create table if not exists public.deadlines (
   id uuid primary key default gen_random_uuid(),
@@ -28,6 +44,7 @@ create table if not exists public.deadlines (
   title text not null,
   due_at timestamptz not null,
   category text,
+  event_type text not null default 'deadline',
   source_snippet text,
   completed_at timestamptz,
   google_event_id text,
@@ -36,6 +53,7 @@ create table if not exists public.deadlines (
 
 -- Keep schema additive for projects already created from an earlier version.
 alter table public.deadlines add column if not exists category text;
+alter table public.deadlines add column if not exists event_type text not null default 'deadline';
 alter table public.deadlines add column if not exists completed_at timestamptz;
 alter table public.deadlines add column if not exists google_event_id text;
 

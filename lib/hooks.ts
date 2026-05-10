@@ -147,3 +147,9 @@ export function useCoursesById(courses: Course[]): Record<string, Course> {
     [courses]
   );
 }
+
+export function getAllEvents(deadlines: Deadline[]) {
+  return [...deadlines].sort(
+    (a, b) => +new Date(a.due_at) - +new Date(b.due_at)
+  );
+}

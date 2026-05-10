@@ -18,10 +18,14 @@ export function CalendarView({
   deadlines,
   coursesById,
   googleEvents,
+  initialView = "dayGridMonth",
+  onDeleteDeadline,
 }: {
   deadlines: Deadline[];
   coursesById: Record<string, Course>;
   googleEvents?: GoogleCalendarEvent[];
+  initialView?: "dayGridMonth" | "timeGridWeek";
+  onDeleteDeadline?: (id: string) => void;
 }) {
   const [detail, setDetail] = useState<CalendarDetail | null>(null);
 
@@ -76,7 +80,7 @@ export function CalendarView({
       <div className="rounded-2xl border border-ink-200 bg-surface p-4 shadow-soft">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
+          initialView={initialView}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
@@ -103,6 +107,7 @@ export function CalendarView({
             const completed = !!props.completed;
             setDetail({
               kind: "deadline",
+                id: info.event.id,
               title: info.event.title,
               courseName: courseName ?? "Course",
               category,
@@ -115,7 +120,7 @@ export function CalendarView({
       </div>
 
       {detail && (
-        <CalendarEventModal detail={detail} onClose={() => setDetail(null)} />
+        <CalendarEventModal detail={detail} onClose={() => setDetail(null)} onDeleteDeadline={onDeleteDeadline} />
       )}
     </>
   );
@@ -124,6 +129,7 @@ export function CalendarView({
 type CalendarDetail =
   | {
       kind: "deadline";
+      id: string;
       title: string;
       courseName: string;
       category: DeadlineCategory | null;
@@ -141,9 +147,11 @@ type CalendarDetail =
 function CalendarEventModal({
   detail,
   onClose,
+  onDeleteDeadline,
 }: {
   detail: CalendarDetail;
   onClose: () => void;
+  onDeleteDeadline?: (id: string) => void;
 }) {
   return (
     <div
@@ -215,6 +223,18 @@ function CalendarEventModal({
               <p className="mt-4 text-xs text-ink-500">
                 No syllabus snippet stored for this deadline.
               </p>
+            )}
+            {onDeleteDeadline && (
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteDeadline(detail.id);
+                  onClose();
+                }}
+                className="mt-4 rounded-md border border-red-200 bg-surface px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+              >
+                Delete event
+              </button>
             )}
           </>
         )}

@@ -9,8 +9,11 @@ import { ThemePicker } from "@/components/ThemePicker";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/calendar", label: "Calendar" },
+  { href: "/dashboard/tasks", label: "Tasks" },
   { href: "/dashboard/courses", label: "Courses" },
-  { href: "/dashboard/chat", label: "Assistant" },
+  { href: "/dashboard/gpa", label: "GPA" },
+  { href: "/dashboard/chat", label: "Chat" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

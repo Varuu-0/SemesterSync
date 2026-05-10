@@ -1,7 +1,7 @@
 "use client";
 
 import * as chrono from "chrono-node";
-import type { DeadlineCategory } from "./types";
+import type { DeadlineCategory, GradeComponent } from "./types";
 
 export type ExtractedDeadline = {
   title: string;
@@ -87,11 +87,16 @@ async function extractTextFromPdfPage(page: {
 export async function extractDeadlinesSmart(
   text: string,
   opts: { courseName?: string; fileName?: string; refDate?: Date } = {}
-): Promise<{ deadlines: ExtractedDeadline[]; source: "ai" | "local"; reason?: string }> {
+): Promise<{
+  deadlines: ExtractedDeadline[];
+  gradeBreakdown: GradeComponent[];
+  source: "ai" | "local";
+  reason?: string;
+}> {
   const refDate = opts.refDate ?? new Date();
 
   try {
-    const res = await fetch("/api/extract-deadlines", {
+    const res = await fetchWithRetry("/api/extract-deadlines", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -110,6 +115,7 @@ export async function extractDeadlinesSmart(
           dueAt: string;
           sourceSnippet?: string;
         }>;
+        gradeBreakdown?: GradeComponent[];
       };
       const deadlines = json.deadlines
         .map((d) => ({
@@ -120,7 +126,8 @@ export async function extractDeadlinesSmart(
           source: "ai" as const,
         }))
         .filter((d) => !Number.isNaN(d.dueAt.getTime()));
-      return { deadlines, source: "ai" };
+      const gradeBreakdown = normalizeGradeBreakdown(json.gradeBreakdown ?? []);
+      return { deadlines, gradeBreakdown, source: "ai" };
     }
 
     if (res.status !== 501) {
@@ -132,7 +139,22 @@ export async function extractDeadlinesSmart(
   }
 
   const local = extractDeadlinesFromText(text, refDate);
-  return { deadlines: local, source: "local" };
+  return {
+    deadlines: local,
+    gradeBreakdown: extractGradeBreakdownFromText(text),
+    source: "local",
+  };
+}
+
+async function fetchWithRetry(url: string, init: RequestInit, maxRetries = 3): Promise<Response> {
+  let delay = 500;
+  for (let i = 0; i <= maxRetries; i++) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 || i === maxRetries) return res;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    delay *= 2;
+  }
+  throw new Error("unreachable");
 }
 
 /**
@@ -306,4 +328,44 @@ function buildTitle(snippet: string, dateText: string): string {
   if (cleaned.length > 80) cleaned = cleaned.slice(0, 80).trim() + "…";
   if (!cleaned) cleaned = "Deadline";
   return cleaned;
+}
+
+function normalizeGradeBreakdown(raw: GradeComponent[]): GradeComponent[] {
+  return raw
+    .map((g) => ({
+      component: (g.component ?? "").trim(),
+      weight: Number(g.weight),
+    }))
+    .filter(
+      (g) => g.component.length > 0 && Number.isFinite(g.weight) && g.weight > 0
+    );
+}
+
+// Owen-inspired fallback: look for lines like "Midterm Exam 25%" or "Assignments - 40%"
+function extractGradeBreakdownFromText(text: string): GradeComponent[] {
+  const out: GradeComponent[] = [];
+  const seen = new Set<string>();
+  const lines = text
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 2000);
+
+  const re = /^(.{3,120}?)\s*(?:-|:)?\s*(\d{1,3}(?:\.\d+)?)\s*%$/i;
+  for (const line of lines) {
+    const match = line.match(re);
+    if (!match) continue;
+    const component = match[1]
+      .replace(/\s+/g, " ")
+      .replace(/^(grading|evaluation)\s*/i, "")
+      .trim();
+    const weight = Number.parseFloat(match[2]);
+    if (!component || !Number.isFinite(weight) || weight <= 0 || weight > 100)
+      continue;
+    const key = `${component.toLowerCase()}::${weight}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ component, weight });
+  }
+  return out;
 }

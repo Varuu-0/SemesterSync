@@ -48,12 +48,14 @@ export function PdfUpload({
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
       const path = `${userId}/courses/${course.id}/${Date.now()}-${safeName}`;
 
-      const upload = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .upload(path, file, {
-          contentType: "application/pdf",
-          upsert: false,
-        });
+      const upload = await withRetry(() =>
+        supabase.storage
+          .from(STORAGE_BUCKET)
+          .upload(path, file, {
+            contentType: "application/pdf",
+            upsert: false,
+          })
+      );
       if (upload.error) throw upload.error;
 
       setPhase("read");
@@ -73,10 +75,18 @@ export function PdfUpload({
       if (update.error) throw update.error;
 
       setPhase("ai");
-      const { deadlines, source } = await extractDeadlinesSmart(text, {
+      const { deadlines, gradeBreakdown, source } = await extractDeadlinesSmart(text, {
         courseName: course.name,
         fileName: file.name,
       });
+
+      if (gradeBreakdown.length > 0) {
+        const gradeUpdate = await supabase
+          .from("courses")
+          .update({ grade_breakdown: gradeBreakdown })
+          .eq("id", course.id);
+        if (gradeUpdate.error) throw gradeUpdate.error;
+      }
 
       if (deadlines.length === 0) {
         setPhase("done");
@@ -99,13 +109,19 @@ export function PdfUpload({
         source_snippet: d.sourceSnippet ?? null,
       }));
 
-      const insert = await supabase.from("deadlines").insert(rows);
+      const insert = await withRetry(async () => {
+        return await supabase.from("deadlines").insert(rows);
+      });
       if (insert.error) throw insert.error;
 
       setPhase("done");
       const label = source === "ai" ? "Gemini" : "Local extractor";
       setStatus(
-        `${label} added ${deadlines.length} deadline${deadlines.length === 1 ? "" : "s"}.`
+        `${label} added ${deadlines.length} deadline${deadlines.length === 1 ? "" : "s"}${
+          gradeBreakdown.length > 0
+            ? ` and ${gradeBreakdown.length} grading component${gradeBreakdown.length === 1 ? "" : "s"}`
+            : ""
+        }.`
       );
       onComplete?.(deadlines.length);
     } catch (e) {
@@ -213,6 +229,22 @@ export function PdfUpload({
       )}
     </div>
   );
+}
+
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let waitMs = 400;
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastError = e;
+      if (i === attempts - 1) break;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      waitMs *= 2;
+    }
+  }
+  throw lastError;
 }
 
 function CheckIcon() {
