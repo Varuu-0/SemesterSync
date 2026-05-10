@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useCourses } from '../contexts/CourseContext';
 import { analyzeBurnout } from '../utils/burnoutDetector';
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, List, LayoutGrid, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, List, LayoutGrid, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const VIEWS = [
   { id: 'month', icon: LayoutGrid, label: 'Month' },
@@ -27,10 +30,20 @@ function getMonday(d) {
 }
 
 export default function CalendarView() {
-  const { getAllEvents, courses } = useCourses();
+  const { getAllEvents, courses, addCustomEvent, deleteEvent } = useCourses();
   const [view, setView] = useState('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', type: 'assignment', courseId: '' });
+
+  const handleAddEvent = (e) => {
+    e.preventDefault();
+    if (!newEvent.title || !newEvent.date) return;
+    addCustomEvent(newEvent);
+    setIsAddEventOpen(false);
+    setNewEvent({ title: '', date: '', type: 'assignment', courseId: '' });
+  };
 
   const allEvents = useMemo(() => getAllEvents(), [getAllEvents]);
   const burnout = useMemo(() => analyzeBurnout(allEvents), [allEvents]);
@@ -78,10 +91,58 @@ export default function CalendarView() {
               : `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
           </h2>
           <Button variant="outline" size="sm" onClick={goToToday} className="hidden sm:flex">Today</Button>
+          
+          <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="hidden sm:flex bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus size={16} className="mr-2" /> Add Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add Custom Event</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddEvent} className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="title">Event Title</Label>
+                  <Input id="title" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="e.g. Doctor Appointment" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input id="date" type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="type">Type</Label>
+                    <select id="type" value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})} className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <option value="assignment">Assignment</option>
+                      <option value="exam">Exam</option>
+                      <option value="project">Project</option>
+                      <option value="personal">Personal</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="course">Course (Optional)</Label>
+                    <select id="course" value={newEvent.courseId} onChange={e => setNewEvent({...newEvent, courseId: e.target.value})} className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <option value="">Personal / None</option>
+                      {courses.map(c => <option key={c.id} value={c.id}>{c.courseCode || c.courseName}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <Button type="submit" className="mt-4">Save Event</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
         
         <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto w-full sm:w-auto justify-between sm:justify-end">
-          <Button variant="outline" size="sm" onClick={goToToday} className="sm:hidden">Today</Button>
+          <div className="flex gap-2 sm:hidden">
+            <Button variant="outline" size="sm" onClick={goToToday}>Today</Button>
+            <Button size="sm" onClick={() => setIsAddEventOpen(true)} className="bg-primary text-primary-foreground">
+              <Plus size={16} />
+            </Button>
+          </div>
           
           <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-8 w-8"><ChevronLeft size={16} /></Button>
@@ -145,13 +206,24 @@ export default function CalendarView() {
           </CardHeader>
           <CardContent className="grid gap-2">
             {eventsByDate[selectedDate].map((e, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 border-l-4" style={{ borderLeftColor: e.colorRaw }}>
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 border-l-4 group" style={{ borderLeftColor: e.colorRaw }}>
                 <Badge variant="outline" className="capitalize w-24 justify-center bg-background shrink-0">{e.type}</Badge>
-                <div className="flex flex-col min-w-0">
+                <div className="flex flex-col min-w-0 flex-1">
                   <span className="font-semibold truncate">{e.title}</span>
                   <span className="text-xs text-muted-foreground truncate">{e.courseCode || e.courseName}</span>
                 </div>
-                {e.weight && <Badge variant="secondary" className="ml-auto font-mono">{e.weight}%</Badge>}
+                <div className="flex items-center gap-2 ml-auto">
+                  {e.weight && <Badge variant="secondary" className="font-mono">{e.weight}%</Badge>}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => deleteEvent(e.id, e.isCustom)}
+                    title="Delete Event"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
               </div>
             ))}
           </CardContent>
@@ -274,8 +346,8 @@ function TimelineView({ events }) {
 
   let lastMonth = '';
   return (
-    <div className="p-6 bg-background h-full overflow-y-auto">
-      <div className="relative border-l-2 border-muted pl-6 space-y-8 py-4">
+    <div className="p-4 sm:p-6 bg-background h-full overflow-y-auto overflow-x-hidden">
+      <div className="relative border-l-2 border-muted pl-4 sm:pl-8 ml-20 sm:ml-28 space-y-8 py-4">
         {datedEvents.map((e, i) => {
           const d = new Date(e.date + 'T00:00:00');
           const monthLabel = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
@@ -284,11 +356,11 @@ function TimelineView({ events }) {
           return (
             <div key={i} className="relative">
               {showMonth && (
-                <div className="absolute -left-[5.5rem] -top-3 px-3 py-1 bg-muted rounded-full text-xs font-bold uppercase tracking-wider text-muted-foreground shadow-sm">
+                <div className="absolute -left-[5.5rem] sm:-left-[6.5rem] -top-3 px-2 sm:px-3 py-1 bg-muted rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground shadow-sm whitespace-nowrap z-10">
                   {monthLabel}
                 </div>
               )}
-              <div className="absolute -left-[1.95rem] top-1 h-3 w-3 rounded-full ring-4 ring-background" style={{ background: e.colorRaw }} />
+              <div className="absolute -left-[1.45rem] sm:-left-[2.45rem] top-1 h-3 w-3 rounded-full ring-4 ring-background" style={{ background: e.colorRaw }} />
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 -mt-1">
                 <div className="text-sm font-semibold text-muted-foreground w-24 shrink-0">
                   {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}

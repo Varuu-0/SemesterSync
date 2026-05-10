@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useCourses } from '../contexts/CourseContext';
-import { CheckCircle2, Circle, AlertTriangle, Clock, Flame, CalendarClock, Info } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Flame, CalendarClock, Info, ChevronDown, ChevronRight, CheckSquare } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -37,8 +37,9 @@ function getSuggestedAction(event, days) {
 
 export default function Planner() {
   const { getAllEvents, courses, toggleTaskCompletion } = useCourses();
+  const [showCompleted, setShowCompleted] = useState(false);
 
-  const { thisWeek, nextWeek, upcoming } = useMemo(() => {
+  const { thisWeek, nextWeek, upcoming, completed } = useMemo(() => {
     const events = getAllEvents().filter((e) => e.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -52,23 +53,32 @@ export default function Planner() {
     const thisWeek = [];
     const nextWeek = [];
     const upcoming = [];
+    const completed = [];
 
     events.forEach((e) => {
       const d = new Date(e.date + 'T00:00:00');
       const days = getDaysUntil(e.date);
       const item = { ...e, daysUntil: days, urgencyClass: getUrgencyClass(days) };
 
-      if (days < 0 || d <= endThisWeek) thisWeek.push(item);
-      else if (d <= endNextWeek) nextWeek.push(item);
-      else upcoming.push(item);
+      if (item.completed) {
+        completed.push(item);
+      } else if (days < 0 || d <= endThisWeek) {
+        thisWeek.push(item);
+      } else if (d <= endNextWeek) {
+        nextWeek.push(item);
+      } else {
+        upcoming.push(item);
+      }
     });
 
     const sort = (a, b) => a.daysUntil - b.daysUntil;
     thisWeek.sort(sort);
     nextWeek.sort(sort);
     upcoming.sort(sort);
+    // Sort completed by most recently due first (optional, but makes sense)
+    completed.sort((a, b) => b.daysUntil - a.daysUntil);
 
-    return { thisWeek, nextWeek, upcoming };
+    return { thisWeek, nextWeek, upcoming, completed };
   }, [getAllEvents]);
 
   if (courses.length === 0) {
@@ -98,19 +108,43 @@ export default function Planner() {
         {upcoming.length > 0 && (
           <PlannerSection title="Upcoming" icon={<CalendarClock size={18} className="text-primary" />} items={upcoming.slice(0, 10)} emptyMsg="" onToggle={toggleTaskCompletion} />
         )}
+        
+        {completed.length > 0 && (
+          <div className="mt-8">
+            <button 
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-full p-2 rounded-lg hover:bg-muted/50"
+            >
+              {showCompleted ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+              <CheckSquare size={18} />
+              <h3 className="text-lg font-semibold">Completed</h3>
+              <Badge variant="secondary" className="ml-2 font-mono">{completed.length}</Badge>
+            </button>
+            
+            {showCompleted && (
+              <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
+                <PlannerSection title="" icon={null} items={completed} emptyMsg="" onToggle={toggleTaskCompletion} isCompletedSection={true} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function PlannerSection({ title, icon, items, emptyMsg, onToggle }) {
+function PlannerSection({ title, icon, items, emptyMsg, onToggle, isCompletedSection = false }) {
+  if (items.length === 0 && isCompletedSection) return null;
+
   return (
     <section className="space-y-4">
-      <div className="flex items-center gap-2 text-foreground font-semibold">
-        {icon}
-        <h3 className="text-lg">{title}</h3>
-        <Badge variant="secondary" className="ml-2 font-mono">{items.length}</Badge>
-      </div>
+      {title && (
+        <div className="flex items-center gap-2 text-foreground font-semibold">
+          {icon}
+          <h3 className="text-lg">{title}</h3>
+          <Badge variant="secondary" className="ml-2 font-mono">{items.length}</Badge>
+        </div>
+      )}
       
       {items.length === 0 ? (
         <Card className="bg-muted/30 border-dashed border-muted-foreground/30">
