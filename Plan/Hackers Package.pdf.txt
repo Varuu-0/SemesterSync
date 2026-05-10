@@ -1,0 +1,142 @@
+GDGHACKS
+2026
+May 9th - 10th 2026
+In-Person @ Rozanski Hall,
+University of Guelph
+Supported byHacker Package
+Table of Content
+Welcome
+Rules of Hacking
+Code of Conduct
+Campus Map
+Submission Instructions
+Hackathon Prep
+Our Sponsors
+Welcome TO GDGHacks 2026!
+The Google Developer Groups at Guelph is launching a
+brand-new 24-hour hackathon! We are beyond excited to
+welcome you to the University of Guelph for an adventure
+day where code meets creativity. Our GDG club began this
+year as a place for aspiring developers, designers, and tech
+enthusiasts, and we have grown phenomenally into a
+community of over 550 members. Our club thrives on the
+passion and ambition of students like you, who are eager to
+push the boundaries of what's possible with technology.
+We're putting a spotlight on fun, learning, and making
+unforgettable memories at GDGHACKS. Whether you're a
+novice or a seasoned programmer, our hackathon is the
+perfect arena to unleash your programming potential and
+network with peers and industry leaders. Our schedule is
+packed with engaging workshops, exciting activities, and
+plenty of opportunities to meet new people and forge
+lasting connections.
+Get ready to dive into a weekend of coding, collaboration,
+and celebration.
+Ready, set, hack!
+Hackathon Schedule (24 Hours)
+Day 1 (Saturday - May 9th)
+**Late Night Snacks are Available From 10 PM - 8 AM 6:00 PM – 7:00 PM – Hacker Check-In
+7:00 PM – 7:30 PM – Opening Ceremony
+7:30 PM – Hacking Begins
+8:00 PM – 8:45 PM – Dinner/Networking Bingo
+9:00 PM – 9:45 PM – Gemini Workshop
+10:00 PM - 10:45 PM - Cloud Computing
+10:45 PM - 12:00 AM - Hacking Continues
+Late Night:
+12:00 AM – 4:00 AM – Overnight Hacking
+Day 2 (Sunday - May 10th)
+4:00 AM – 9:00 AM – Early Morning Hacking
+8:00 AM – 9:00 AM – Breakfast
+9:00 AM – 10:00 AM – 3D Modeling/blender workshop 
+10:30 AM – 12:30 PM – Super Smash Bros Video Game comp
+12:00 AM – 1:00 PM – Lunch
+1:30 PM - 3:30 - Hacking Continues
+3:30 PM - Final Submission
+4:00 PM – 5:30 PM – Judging
+5:30 PM – 6:00 PM – Closing Ceremony & Awards
+Opening/Closing Ceremony Judging Food Workshop/Activity Hacking
+Rules of Hacking
+Team Rules:
+All team members must be accepted and registered
+as participants for GDDHacks 2026.
+Teams may have a maximum of 4 members who
+must all be able to attend the event in person.
+You cannot be a part of more than one team.
+A team can only submit a total of one project
+Project Eligibility:
+All code for your project must be written between
+6:00 PM EST on Saturday, May 9, 2025, and 6:00 PM
+EST on Sunday, May 10, 2025.
+To be eligible to demo your project, teams must
+submit their projects before  4:00 pm EST on Sunday,
+May 10, 2026.
+You are allowed to use tools like LLMs (e.g., ChatGPT,
+Cursor, or similar AI assistants) during the event.
+**It is permitted to prepare any structural
+components for projects requiring hardware in
+advance.
+**Note: If you are bringing your own hardware, you must inform the organizers during team registration.
+Rules of Hacking - Cont.
+Project Eligibility:
+It is permitted to gather a data set that will be used
+as training data for projects utilizing AI in advance.
+Training an AI model on data in advance is not
+permitted.
+Any teams that commit plagiarism will be
+disqualified.
+You may use any publicly available
+libraries/packages/design assets.
+
+Code of Conduct
+Respect & Inclusion
+Treat all participants, mentors, judges, and organizers with
+respect. Harassment, discrimination, or inappropriate behavior
+of any kind will not be tolerated.
+Hardware Use
+If you are bringing your own hardware, you must inform the
+organizers during team registration. All equipment must
+comply with the event’s safety guidelines.
+Fair Play
+Plagiarism or submitting work that is not your own is strictly
+prohibited. Teams must ensure all contributions are properly
+attributed when applicable.
+Safety
+All participants must follow venue rules and safety instructions
+at all times. Unsafe or disruptive behavior may result in
+disqualification.
+Organizer Authority
+Organizers reserve the right to remove any participant or team
+that violates these rules or disrupts the event.
+Campus Map
+The hackathon will take place in Rozanski Hall at the University of Guelph.
+https://classfind.com/guelph
+Register for the hackathon on Devpost
+Ensure your Devpost team information is accurate
+Click the "Start project" button to begin submission
+Add a title and a short description of your project
+Click the "Import from portfolio" button to import your project
+Agree to terms and conditions and the click the "Submit
+project" button
+For more information please visit Organizers reserve the right to
+remove any participant or team that violates these rules or
+disrupts the event.
+Submission Instructions
+Here’s a small list of things we recommend 
+each Hacker should bring:
+     Laptop + Charger
+    Toothbrush + Toothpaste
+    Cell Phone + Charger
+    Photo ID [MANDATORY]
+    An extra hoodie
+    Headphones, notepad, and pens
+    Reusable water bottle
+    Allergy medicine! (or any other medicine you need!)
+We will be providing all meals and snacks throughout
+the event. However, participants are welcome to bring
+their own snacks while they work.
+Note: If you have any dietary restrictions (e.g., gluten-
+free, vegan, etc.), please email gdgguelph@gmail.com
+in advance.Hackathon Prep
+
+Our Sponsors
+

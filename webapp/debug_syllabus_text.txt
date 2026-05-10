@@ -1,0 +1,150 @@
+CP-468 Artificial intelligence Course Syllabus Page 1 of 6 I acknowledge that in Kitchener, Waterloo, Cambridge, and Brantford, we are on the traditional territory of the Neutral, Anishnawbe, and Haudenosaunee peoples.
+Course Syllabus Faculty of Science Department of Computer Science & Physics CP 468 – B Artificial Intelligence Winter 2026 Instructor & Course Information Instructor: Dr.
+Dariush Ebrahimi Course Location: Bricker BA102 in-person Email: Meeting Time: Mon & Wed 1:00 - 2:20 PM Office Location: N2076H Prerequisites: CP213 Intr.
+to Object-Oriented Prog.
+Office Hours: Mon & Wed 3:00 - 4:00 PM, in person, or online by appointment Teaching Assistant: Satvika Pullisani - University Course Calendar Description Examination of current concepts and techniques in artificial intelligence and machine learning.
+Topics include knowledge representation, automated reasoning, heuristic search, machine learning, and knowledge-based systems.
+Extensive use of case studies and current applications.
+Course Overview Artificial Intelligence (AI) is a rapidly growing field that involves the development of intelligent machines that can perform tasks that typically require human intelligence.
+This course introduces AI’s fundamental concepts and techniques, including problem-solving, planning, learning, uncertainty, and reasoning.
+Students will learn how to design and implement AI systems using these techniques and gain hands-on experience applying them to solve complex problems, as well as how to evaluate the performance of these systems.
+By the end of the course, students will gain a solid understanding of the concepts and techniques of AI and how this multifaceted technology is rapidly advancing and shaping the future of industries, economies, and humanity.
+They will be able to apply their knowledge to real-world problems and make informed decisions about the use of AI in various domains.
+Course Objectives and Learning Outcomes Upon completion of this course, students will be able to: • Understand the foundations and core concepts of AI.
+• Know about the structure of intelligent agents and environments.
+• Solve problems by searching using informed and uninformed search strategies.
+• Learn adversarial search and decisions in games.
+• Solve problems using game theory and Nash equilibrium.
+• Define constraint satisfaction problems.
+• Learn how to handle and deal with uncertain knowledge.
+• Apply AI techniques, such as machine learning, reinforcement learning, and deep learning, to real-world problems.
+• Develop and evaluate AI models using popular programming languages and tools.
+CP-468 Artificial intelligence Course Syllabus Page 2 of 6 I acknowledge that in Kitchener, Waterloo, Cambridge, and Brantford, we are on the traditional territory of the Neutral, Anishnawbe, and Haudenosaunee peoples.
+Course Tools and Learning Materials Provided Materials in Class and/or WLU MyLearningSpace: Course slides, videos, and class notes Suggested Readings Textbook (optional, and any edition can be used): 1.
+Artificial Intelligence: A Modern Approach, 4th Edition by Stuart Russell and Peter Norvig • Publisher: Pearson • Date Published: April 28, 2020, Hardcover: 1136 pages • ISBN-10: 0134610997, ISBN-13: 978-0134610993 • Source Link: • Cost & Direct Purchase link: $57.99 - $87.99, Click here to purchase 2.
+Reinforcement Learning: An Introduction, 2nd Edition by Richard S.
+Sutton and Andrew G.
+Barto, • Publisher: Bradford Books • Date Published: November 13, 2018, Hardcover: 552 pages • ISBN-10: 0262039249, ISBN-13 : 978-0262039246 • Source Link: • Cost & Direct Purchase link: $111.99 - $143, Click here to purchase Student Evaluation and Grading Scheme Task Weighting Due Date Quiz 1 10% Jan.
+28, 2026 – Wednesday @ 1:00 PM Assignment 1 10% Feb.
+15, 2026 – Sunday @ 11:30 PM Quiz 2 10% Feb.
+23, 2026 – Monday @ 1:00 PM Quiz 3 10% Mar.
+11, 2026 – Wednesday @ 1:00 PM Assignment 2 10% Mar.
+22, 2026 – Sunday @ 11:30 PM Exam 30% Mar.
+25, 2026 – Wednesday @ 1:00 PM Project Presentation 5% Mar.
+30 & Apr.
+01, 2026 Project Report 15% Apr.
+12, 2026 – Sunday @ 11:30 PM Total 100% Weekly Schedule(S) (Tentative and subject to changes) Week Date Topic Reminder Week 1 05 & 07 Jan.
+2026 Introduction, Intelligent Agents Week 2 12 & 14 Jan.
+2026 Problem-Solving by Search, Heuristic Search Adversarial Search and Games Week 3 19 & 21 Jan.
+2026 Optimization & Constraint Satisfaction Problems Week 4 26 & 28 Jan.
+2026 Machine Learning Quiz 1 Jan 28 Week 5 02 & 04 Feb.
+2026 Introduction to Reinforcement Learning Week 6 09 & 11 Feb.
+2026 Markov Decision Process, and Q-Learning Ass.
+1 due Feb15 Week 7 23 & 25 Feb.
+2026 Neural Networks Quiz 2 Feb 23 Week 8 02 & 04 Mar.
+2026 Deep Learning Week 9 09 & 11 Mar.
+2026 Uncertain Knowledge & Reasoning Quiz 3 Mar 11 Week 10 16 & 18 Mar.
+2026 Game Theory & Nash Equilibrium Ass.
+2 due Mar22 Week 11 23 & 25 Mar.
+2026 Mixed Strategy Algorithm & Calculating Payoffs Exam Mar 25 Week 12 30 & 01 Apr.
+2026 Project Presentation Project due Apr 12 CP-468 Artificial intelligence Course Syllabus Page 3 of 6 I acknowledge that in Kitchener, Waterloo, Cambridge, and Brantford, we are on the traditional territory of the Neutral, Anishnawbe, and Haudenosaunee peoples.
+Assignments & Term Project General information • There are in total two assignments and one term project, each to be completed through group work.
+• Students must form groups of 4 to 5 members to collaborate on the assignments and the term project.
+• The designated group leader must email the TA the first and last names, student IDs, and email addresses of all group members.
+Groups will receive a GroupID on a first-come, first-served basis.
+• All members of a group will receive the same grade.
+It is not expected that all team members contribute equally to all components.
+However, every team member should make integral contributions to the group work.
+In case a member does not contribute, and this is confirmed by the leader and the rest of the group, that student will receive a grade of zero.
+• Only the group leader must submit the assignments and term project on MyLS.
+Other members must ensure that the leader submits all work on time.
+• Details and further instructions for the assignments and the term project will be posted on MyLS in the Dropbox folder at least two weeks before their due dates.
+• Late submissions will incur a 20% penalty and will not be accepted after five days past the due date.
+• Assignment submissions must consist of a single .pdf file unless coding files are required (refer to the assignment instructions on MyLS).
+• For the term project, submit one .zib file containing: o The project report as a .pdf file, and o All required coding files and numerical results in Excel sheets.
+• Use the following naming conventions for your files (note: use dashes, not underscores): o CP468-A1-GroupID.pdf (for assignment 1) o CP468-A2-GroupID.pdf (for assignment 2) o CP468-TP-GroupID.zip (for the term project) • The .pdf file must include a cover page, page numbers, and a header on each page with your GroupID, course code, submission date, and the assignment or project title.
+• Finally, students must present their term projects during the last week of classes.
+Term Project Write-up Instructions Your team must submit a project report with a maximum length of eight pages using the IEEE journal template (single-spaced, double column).
+We highly recommend using LaTeX for preparing the report.
+You must adhere to the following structure and minimum requirements: 1.
+Title: Choose a title that fits your project.
+2.
+Author Information: List all project group members with their affiliation(s) and email address(es).
+3.
+Keywords: Provide important keywords related to your project 4.
+Abstract (maximum 250 words): Summarize the project task and highlight the most important findings 5.
+Introduction: Introduce the research area and its real-world significance, including relevant applications.
+Briefly describe the problem being addressed and solved.
+Conclude with a summary of the project task and key findings (similar to the abstract but more detailed).
+CP-468 Artificial intelligence Course Syllabus Page 4 of 6 I acknowledge that in Kitchener, Waterloo, Cambridge, and Brantford, we are on the traditional territory of the Neutral, Anishnawbe, and Haudenosaunee peoples.
+6.
+Related Work (Literature Review): Present a structured literature review and clearly distinguish your work from existing studies.
+Provide a brief description of each referenced paper, including the exact problem tackled, challenges, limitations, and proposed solution(s).
+7.
+System Model and Problem Description: Illustrate your system model using well-constructed figure(s).
+Describe the problem in detail, including examples if necessary.
+8.
+Proposed Approach: Describe the model(s) you implemented and include citations where appropriate.
+If using or extending previously published models, you must properly cite and acknowledge the original work.
+Discuss algorithm selection, design, and implementation.
+9.
+Performance Evaluation (Numerical Results): Present simulation results and evaluate the performance of your method(s) by varying different metrics.
+Include high-quality figures (minimum 300 dpi).
+10.
+Discussion and Conclusion: Summarize the main insights, implications, and takeaways from your project.
+11.
+References: Include only the references that are cited within the main text.
+Project Evaluation (a total of 20 points) 1.
+Completeness (5 points) • Did you submit all the materials?
+• Did you implement the required model and algorithm/algorithms?
+• Did you run all the required experiments?
+2.
+Correctness (5 points) • Are your models implemented and applied correctly?
+• Do your proposed features improve performance, or do you adequately demonstrate that it was not possible to improve performance?
+• Do you observe the correct trends in the experiments?
+3.
+Writing quality (5 points) • Is your report clear and free of grammatical errors and typos?
+• Did you follow the guidelines for the project write-up & paper structure?
+• Did you effectively present numerical results (e.g., via tables or figures)?
+4.
+Presentation (5 points) • Are your presentation slides clear and interesting to the audience?
+• Have you addressed the project very well with clarity and coherence?
+• How well did you engage with the audience?
+Course Notes 1.
+Course Syllabus: The course syllabus is not fixed and is subject to change based on the class flow.
+2.
+Posting of Materials: The class materials, like PowerPoint presentations and videos, will be posted online on WLU MyLS before or after each class or two.
+3.
+Assignments Posting Dates: Assignments will be posted on MyLS one or two weeks before the due dates and announced via email to registered students.
+4.
+Late Assignment: Late assignment submissions will be penalized 20% and will not be accepted after five days from the due date.
+5.
+Tests and Assignments Dates: The timing and dates of all tests, quizzes, and assignments, along with their due dates, are outlined in the Grading Scheme section.
+Students are expected to adhere to these dates and should not miss any deadlines due to personal schedules or travel plans.
+6.
+Missing Test or Quiz: Students should not schedule or plan other commitments during class time.
+It is the student’s responsibility to attend all exams and quizzes held during class sessions.
+Missing an assessment may result in a grade of zero for that test or quiz.
+7.
+Announcements: Students are required to regularly check this course outline for any changes and check their university email for announcements from the course instructor.
+CP-468 Artificial intelligence Course Syllabus Page 5 of 6 I acknowledge that in Kitchener, Waterloo, Cambridge, and Brantford, we are on the traditional territory of the Neutral, Anishnawbe, and Haudenosaunee peoples.
+8.
+Examination Mode: Quizzes and examinations will be conducted during class time, either on paper or online through the university portal (MyLS) using a lockdown browser.
+Attendance will be recorded.
+9.
+Make-Up Test: There will be no make-up test or quiz.
+10.
+Passing the Course: To pass the course, students should attain a minimum of 50% in the total of all components mentioned in the Grading Scheme Section.
+11.
+Participation in Class: It is encouraged to participate in class discussions, and there will be chances to get bonus points by answering questions raised in class.
+12.
+Attendance: The university’s attendance policy is followed.
+University and Course Policies Approved by the Senate 1.
+Academic Calendars: Students are encouraged to review the Academic Calendar for information regarding all important dates, deadlines, and services available on campus.
+
+[...]
+Accessibility: Students requiring accommodation are advised to contact Laurier’s Accessible Learning Centre for information regarding its services and resources.
+
+[...]
+This culture values trustworthiness (e.g., honesty, integrity, reliability), fairness, caring, respect, responsibility, and citizenship.
+Together, we have a shared responsibility to uphold this culture in our academic and non-academic behavior.

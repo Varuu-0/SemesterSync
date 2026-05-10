@@ -1,0 +1,830 @@
+SyllabusSync AI — Deep Research & Hackathon
+Strategy
+Core Idea
+Build an AI-powered academic planning assistant that converts messy course syllabi, CourseLink
+announcements, emails, and assignment descriptions into:
+A unified academic calendar
+Smart weekly task planning
+AI-generated study breakdowns
+Risk/overload detection
+Auto-generated reminders and todos
+Exportable calendar events (.ics / Google Calendar)
+The goal is to solve a real student problem:
+"I missed an assignment because the syllabus was 18 pages long and hidden inside random
+PDFs and announcements."
+This is strong hackathon material because:
+Extremely relatable
+Easy to demo visually
+Uses AI meaningfully
+Feels like a real startup product
+Can be completed in 24 hours with MVP scope
+Lets you show OCR, LLMs, structured extraction, and automation
+Why This Idea Is Strong
+1. Immediate Understandability
+Judges understand the value in under 10 seconds.
+"Upload your syllabi → instantly get your semester planned out."
+That is MUCH stronger than:
+generic chatbot
+AI study buddy• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+1
+random Gemini wrapper
+motivational AI
+2. High Visual Impact
+You can create an impressive demo:
+Demo Flow
+Drag in 2–3 real syllabi PDFs
+Show messy raw PDF text
+AI extracts:
+assignments
+quizzes
+midterms
+weights
+dates
+lecture topics
+Timeline/calendar auto-generates
+AI warns:
+"Week 7 overload detected"
+"3 midterms within 5 days"
+Show generated study tasks
+Export to Google Calendar
+Show notifications/reminders
+Judges LOVE visible transformation.
+3. You Can Add Layers Fast
+Even if the MVP is simple, you can stack features quickly:
+Basic MVP
+PDF upload
+date extraction
+calendar output
+Advanced Version
+AI prioritization
+burnout detection• 
+• 
+1. 
+2. 
+3. 
+4. 
+5. 
+6. 
+7. 
+8. 
+9. 
+10. 
+11. 
+12. 
+13. 
+14. 
+15. 
+16. 
+• 
+• 
+• 
+• 
+• 
+2
+study time estimation
+natural-language planner
+assignment decomposition
+chatbot assistant
+collaborative planning
+professor announcement ingestion
+This gives you infinite stretch-goal potential.
+The Main Product Vision
+Elevator Pitch
+"SyllabusSync AI turns chaotic university course documents into an intelligent semester
+planner that automatically schedules deadlines, generates study plans, detects overload
+weeks, and helps students stay ahead before they fall behind."
+Real Problems Students Have
+Pain Points
+1. Syllabi Are Massive
+Students receive:
+10–25 page PDFs
+weird formatting
+inconsistent dates
+hidden grading rules
+2. Important Dates Are Everywhere
+Deadlines exist in:
+syllabi
+announcements
+emails
+assignment docs
+CourseLink
+Discord messages• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+3
+3. Students Only Realize They're Overloaded Too Late
+Example:
+midterm Monday
+assignment Tuesday
+lab Wednesday
+quiz Friday
+Nobody notices until the week arrives.
+4. Existing Calendar Apps Are Manual
+Google Calendar requires manual entry. Students never fully maintain it.
+Your app automates everything.
+Feature Research
+Core Features (MVP)
+1. PDF Upload + Parsing
+Input
+syllabus PDFs
+DOCX
+pasted text
+screenshots (optional)
+Output
+Structured JSON:
+{
+"course" :"CIS1910" ,
+"assignments" :[
+{
+"title":"Assignment 1" ,
+"due_date" :"2026-09-20" ,
+"weight" :"10%"
+}• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+4
+]
+}
+Recommended Stack
+Frontend:
+React
+Next.js
+Tailwind
+Backend:
+FastAPI OR Node.js Express
+PDF Parsing:
+pdfplumber
+PyMuPDF
+unstructured
+LangChain loaders
+OCR:
+Tesseract
+Gemini Vision
+2. AI Date & Assignment Extraction
+This is the most important feature.
+The AI should extract:
+assignment names
+due dates
+exam dates
+grade weights
+lecture topics
+office hours
+submission platforms
+Recommended AI Approach
+Use structured extraction prompts.
+Example prompt:• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+5
+Extract all assignments, exams, quizzes, and deadlines from this syllabus.
+Return ONLY valid JSON.
+Best Models
+Best hackathon choices:
+Gemini 2.5 Flash
+Gemini 2.5 Pro
+GPT-4.1 Mini
+Claude Sonnet
+Gemini is especially good because:
+PDF support
+multimodal
+generous free credits at hackathons
+strong structured extraction
+3. Unified Semester Calendar
+Calendar Views
+monthly
+weekly
+timeline
+heatmap
+Libraries
+FullCalendar
+React Big Calendar
+Tremor
+Important Feature
+Color-code by course.
+Example:
+CIS1910 = blue
+STAT2040 = green
+BIOL1090 = red
+This massively improves visual clarity.• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+6
+4. Smart Weekly Planner
+This is where the project becomes more than a parser .
+The AI should generate:
+This week:
+- Finish CIS1910 Assignment 2 draft
+- Review recursion for quiz
+- Begin STAT2040 practice questions
+- Spend 3 hours preparing lab report
+Advanced Version
+Estimate workload:
+Expected workload this week: 16 hours
+Risk level: HIGH
+5. Overload / Burnout Detection
+One of the strongest features.
+Example
+Week 8 detected as high intensity.
+You have:
+- 2 midterms
+- 1 lab
+- 1 essay
+Suggested action:
+Begin studying 10 days earlier.
+Why Judges Like This
+It feels intelligent. Not just "AI summary app #3847".
+7
+6. Calendar Export
+Export Types
+.ics
+Google Calendar
+Outlook
+Easy Win
+This gives immediate real-world usefulness.
+Libraries
+ical-generator
+ics npm package
+Advanced Features (Stretch Goals)
+1. CourseLink / LMS Integration
+Potential integrations:
+Canvas
+Moodle
+CourseLink
+Brightspace
+Even mock integration screenshots are enough for hackathons.
+2. AI Assignment Breakdown
+Example:
+Input: "Research paper due in 3 weeks"
+AI Output:
+Week 1:
+- choose topic
+- gather sources• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+8
+Week 2:
+- write outline
+- draft introduction
+Week 3:
+- finalize citations
+- proofreading
+This makes the app feel proactive.
+3. Natural Language Chat
+Examples:
+"What should I focus on this weekend?"
+"When is my busiest month?"
+"What assignments are worth the most?"
+"What can I safely delay?"
+4. Study Time Estimation
+AI estimates required effort.
+Example:
+Calculus Midterm:
+Recommended prep: 8–12 hours
+Can use:
+assignment weight
+course difficulty
+time remaining
+5. Smart Notifications
+Examples:• 
+• 
+• 
+9
+You haven't started Assignment 3 and it's due in 4 days.
+or:
+You have 11 hours of estimated work this weekend.
+6. Collaborative Planning
+Group projects:
+shared deadlines
+teammate reminders
+shared task boards
+Potentially huge demo value.
+Recommended Architecture
+Fastest Hackathon Architecture
+Frontend
+Best Choice
+Next.js + Tailwind
+Why:
+fast deployment
+easy UI
+good file upload support
+modern appearance quickly
+UI Components
+shadcn/ui
+Framer Motion
+FullCalendar• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+10
+Backend
+Option 1 (Recommended)
+Python FastAPI
+Why:
+excellent PDF tooling
+great AI ecosystem
+easier OCR
+faster structured parsing
+Option 2
+Node.js Express
+Better if team is stronger in JS.
+AI Layer
+Recommended
+Gemini API
+Why:
+multimodal
+PDF understanding
+likely sponsor alignment at GDG event
+judges may appreciate ecosystem use
+Database
+Fastest
+Supabase
+Store:
+user uploads
+parsed tasks
+schedules
+reminders• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+11
+Alternative:
+Firebase
+PostgreSQL
+Hosting
+Easiest
+Vercel (frontend)
+Railway/Render (backend)
+Important Technical Challenge Research
+Biggest Challenge: Date Extraction
+Problem
+Syllabi are inconsistent.
+Examples:
+Assignment 2 Due: October 11
+vs
+A2 submission deadline — 11 Oct.
+vs
+Week 5 deliverable (submit before midnight)
+The parser must normalize all formats.• 
+• 
+• 
+• 
+12
+Solution Strategy
+Use LLMs for semantic extraction
+Instead of regex-only parsing.
+Workflow:
+Extract raw text from PDF
+Send chunks to Gemini
+Ask for structured JSON
+Validate schema
+Store clean events
+Suggested Prompt Engineering
+Extraction Prompt
+You are an academic schedule parser.
+Extract all assignments, quizzes, labs, exams, lecture topics, and deadlines.
+Return valid JSON only.
+Fields:
+- course_name
+- event_type
+- title
+- due_date
+- weight
+- description
+Workload Prompt
+Analyze the student's semester schedule.
+Identify overload periods.
+Suggest workload balancing strategies.1. 
+2. 
+3. 
+4. 
+5. 
+13
+Competitive Analysis
+Existing Competitors
+1. Notion Calendar
+Weakness:
+manual input
+no syllabus intelligence
+2. Motion
+Weakness:
+expensive
+not student-focused
+3. Google Calendar
+Weakness:
+entirely manual
+4. MyStudyLife
+Weakness:
+limited AI
+weak automation
+Your Advantage
+You are specifically targeting:
+university students
+syllabus ingestion
+AI workload balancing
+automatic semester planning
+That niche is very compelling.• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+14
+What Judges Will Care About
+1. Real Problem
+This solves a real pain point.
+2. AI Actually Adds Value
+Not just: "We added a chatbot."
+AI is used for:
+extraction
+planning
+prioritization
+forecasting
+3. Strong Demo
+Visual transformations are critical.
+4. Technical Complexity
+You can discuss:
+OCR
+NLP
+structured extraction
+prompt engineering
+scheduling systems
+calendar standards
+How To Make It Look More Advanced Than It Is
+1. Use Strong UI
+A clean UI can double perceived quality.
+Important:
+animations
+color-coded courses• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+15
+loading states
+timeline visualizations
+progress bars
+2. Fake Very Little
+Hackathons allow partial implementations.
+You can:
+hardcode one advanced feature
+simulate smart recommendations
+use curated demo PDFs
+As long as core functionality is real.
+3. Prepare Perfect Demo Inputs
+Do NOT demo random PDFs.
+Prepare:
+clean syllabi
+overloaded weeks
+interesting outputs
+This matters massively.
+Potential Viral Features
+"Academic Doom Week" Detector
+Students LOVE this.
+Example:
+⚠️ Doom Week Detected
+Week 10 contains:
+- 3 assignments
+- 2 midterms• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+16
+- 1 presentation
+Estimated stress level: catastrophic
+Very shareable.
+GPA Risk Predictor
+Potential future feature:
+Skipping this assignment may reduce projected final grade to 71%.
+AI Semester Roast
+Funny feature:
+Your November schedule looks like a boss fight.
+Hackathon judges LOVE memorable humor .
+Best MVP Scope For 24 Hours
+DO THIS
+Must-Haves
+PDF upload
+AI extraction
+unified calendar
+workload warnings
+todo generation
+export calendar
+Nice-To-Haves
+login
+notifications
+chatbot
+collaborative features• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+17
+Avoid
+complex auth
+mobile app
+browser extensions
+real LMS integration
+massive backend complexity
+Stay focused.
+Suggested Team Roles
+Person 1
+Frontend/UI
+Person 2
+Backend/API
+Person 3
+AI parsing + prompt engineering
+Person 4
+Calendar integration + polish/demo
+Recommended Project Names
+Best names:
+SyllabusSync AI
+Syllabiq
+CourseFlow
+SemesterOS
+DeadlineAI
+UniMap
+Schedulr
+StudyPilot
+TaskTerm• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+18
+ChronoClass
+Best overall:
+SemesterOS
+Because it sounds like:
+startup-y
+scalable
+professional
+Winning Demo Strategy
+Start With Pain
+"Every semester students get overwhelmed by massive syllabi and scattered deadlines."
+Show Chaos
+Open a giant syllabus PDF.
+Show Magic Moment
+Upload.
+Then instantly show:
+clean calendar
+task board
+overload detection
+AI study plan
+This is the key moment.
+End With Vision
+"Today we support syllabi. Tomorrow we can support full academic life management across every LMS
+platform."• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+19
+Final Recommendation
+This is one of the strongest hackathon ideas because:
+clear problem
+immediate relatability
+strong visuals
+meaningful AI use
+feasible MVP
+scalable startup potential
+easy judging narrative
+highly demoable
+Most teams will build:
+generic AI chat apps
+random productivity tools
+unfinished social apps
+This project feels like:
+a real product
+with real users
+solving a real issue
+using AI properly
+That combination is exactly what performs well at hackathons.
+Suggested Tech Stack Summary
+Frontend
+Next.js
+Tailwind
+shadcn/ui
+FullCalendar
+Backend
+FastAPI
+Python• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+20
+AI
+Gemini API
+Parsing
+pdfplumber
+PyMuPDF
+Tesseract OCR
+Database
+Supabase
+Deployment
+Vercel
+Railway
+Fastest Possible MVP Timeline
+Hours 1–3
+setup frontend/backend
+implement upload
+Hours 3–6
+PDF extraction
+Gemini parsing
+Hours 6–10
+calendar UI
+event rendering
+Hours 10–14
+workload analysis
+AI planner
+Hours 14–18
+export functionality• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+21
+polishing
+Hours 18–22
+demo preparation
+visuals
+animations
+Hours 22–24
+presentation practice
+bug fixing
+deployment
+Extra Judge Bait Features
+Add One Tiny AI Agent
+Example:
+"What should I work on tonight?"
+Even a basic implementation makes the app feel futuristic.
+Add Semester Heatmap
+Visualize stress intensity.
+This is VERY demo friendly.
+Add Priority Scores
+Example:
+Assignment Priority Score: 92/100
+Judges love scoring systems.• 
+• 
+• 
+• 
+• 
+• 
+• 
+22
+Final Verdict
+This is absolutely worth building at GDGHacks.
+It has:
+strong product-market fit
+realistic implementation scope
+flashy demos
+genuine usefulness
+easy storytelling
+scalable startup potential
+If executed cleanly, this can absolutely place highly at a student hackathon.• 
+• 
+• 
+• 
+• 
+• 
+23

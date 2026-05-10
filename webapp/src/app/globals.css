@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-outfit);
+  --font-mono: var(--font-jetbrains-mono);
+
+  --color-course-blue: #3b82f6;
+  --color-course-blue-bg: #eff6ff;
+  --color-course-green: #10b981;
+  --color-course-green-bg: #ecfdf5;
+  --color-course-red: #ef4444;
+  --color-course-red-bg: #fef2f2;
+  --color-course-purple: #8b5cf6;
+  --color-course-purple-bg: #f5f3ff;
+}
+
+/* Custom Scrollbar for a cleaner feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@layer base {
+  body {
+    @apply bg-[#0c0e14] text-white;
+  }
+}
