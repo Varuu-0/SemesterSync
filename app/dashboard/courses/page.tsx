@@ -10,8 +10,8 @@ import type { Course } from "@/lib/types";
 
 export default function CoursesPage() {
   const { user } = useAuth();
-  const { courses } = useCourses(user?.id);
-  const { deadlines } = useDeadlines(user?.id);
+  const { courses, removeLocal: removeCourseLocal } = useCourses(user?.id);
+  const { deadlines, removeByCourseIdLocal } = useDeadlines(user?.id);
   const [busy, setBusy] = useState(false);
 
   if (!user) return null;
@@ -48,7 +48,12 @@ export default function CoursesPage() {
     }
 
     const { error } = await supabase.from("courses").delete().eq("id", course.id);
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+    } else {
+      removeCourseLocal(course.id);
+      removeByCourseIdLocal(course.id);
+    }
   }
 
   return (

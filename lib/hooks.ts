@@ -63,7 +63,11 @@ export function useCourses(userId: string | undefined) {
     };
   }, [userId]);
 
-  return { courses, loading };
+  const removeLocal = useCallback((id: string) => {
+    setCourses((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  return { courses, loading, removeLocal };
 }
 
 export function useDeadlines(userId: string | undefined) {
@@ -130,7 +134,11 @@ export function useDeadlines(userId: string | undefined) {
     []
   );
 
-  return { deadlines, loading, mutateLocal };
+  const removeByCourseIdLocal = useCallback((courseId: string) => {
+    setDeadlines((prev) => prev.filter((d) => d.course_id !== courseId));
+  }, []);
+
+  return { deadlines, loading, mutateLocal, removeByCourseIdLocal };
 }
 
 export function useCoursesById(courses: Course[]): Record<string, Course> {
